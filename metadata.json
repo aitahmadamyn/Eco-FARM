@@ -1,0 +1,6 @@
+{
+  "name": "ECOFARM CIRCULAR - 3D Industrial Engineering Visualization",
+  "description": "High-end 3D industrial engineering visualization and digital twin of ECOFARM CIRCULAR: an intelligent agricultural biomass valorization pilot plant integrating pyrolysis, hybrid sand thermal energy storage, automated drying, and AI-assisted energy management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
