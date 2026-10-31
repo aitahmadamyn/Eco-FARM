@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { buildEcofarmCircularPlant, PlantBuildResult } from './plantBuilder';
 import { createProcessParticleFlows, ParticleFlowSystem } from './particleFlows';
 import { CameraPreset, DisplayMode, ZoneId } from '../types/plant';
@@ -93,12 +92,7 @@ export class EcofarmSceneManager {
       this.isTransitioningCamera = false;
     });
 
-    // 5. Procedural Studio Environment for PBR Reflections
-    const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
-    this.scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
-    pmremGenerator.dispose();
-
-    // 6. Balanced 3-Point Studio & Sun Lighting Rig
+    // 5. Balanced 3-Point Studio & Sun Lighting Rig
     this.setupLighting();
 
     // 7. Build Plant Procedural Models
@@ -120,13 +114,13 @@ export class EcofarmSceneManager {
   }
 
   private setupLighting() {
-    // Hemisphere fill (cool blue sky vs warm bounce)
-    const hemiLight = new THREE.HemisphereLight(0x93c5fd, 0x1e293b, 1.2);
+    // Hemisphere fill (clean skylight for architectural slab)
+    const hemiLight = new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 1.4);
     hemiLight.position.set(0, 30, 0);
     this.scene.add(hemiLight);
 
-    // Sun Key Light (Directional with soft shadows)
-    const sunLight = new THREE.DirectionalLight(0xffedd5, 2.2); // Warm sunlight
+    // Sun Key Light (Directional with crisp specular highlights)
+    const sunLight = new THREE.DirectionalLight(0xffedd5, 2.4); // Warm sunlight
     sunLight.position.set(24, 28, 20);
     sunLight.castShadow = !this.isSoftwareGl;
     if (sunLight.castShadow) {

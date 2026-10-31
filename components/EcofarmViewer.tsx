@@ -14,7 +14,7 @@ import { BottomControlDock } from './BottomControlDock';
 import { ZoneInspectorModal } from './ZoneInspectorModal';
 import { AiEnergyAdvisorModal } from './AiEnergyAdvisorModal';
 import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
-import { Plus, Minus, RotateCcw, Keyboard, Check } from 'lucide-react';
+import { Plus, Minus, RotateCcw, Keyboard, Check, Eye, Compass } from 'lucide-react';
 
 export default function EcofarmViewer() {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -286,44 +286,68 @@ export default function EcofarmViewer() {
         </div>
       )}
 
-      {/* Floating Touch & Navigation Toolbar (Right Flank - Never occludes model center) */}
-      <div className="fixed right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-2">
+      {/* Floating Touch & Navigation Toolbar (Right Flank - Matching preview) */}
+      <div className="fixed right-3.5 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-2">
         <button
           onClick={() => {
             handleZoom(-4);
             showToast(t.toastZoomIn);
           }}
-          className="w-10 h-10 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 flex items-center justify-center shadow-xl transition-transform active:scale-95 cursor-pointer"
+          className="w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-sky-600 text-slate-200 hover:text-white border border-sky-500/30 flex items-center justify-center shadow-xl transition-all active:scale-95 cursor-pointer"
           title={t.zoomIn}
         >
-          <Plus className="w-4 h-4 text-sky-400" />
+          <Plus className="w-4 h-4 text-sky-400 hover:text-white" />
         </button>
         <button
           onClick={() => {
             handleZoom(4);
             showToast(t.toastZoomOut);
           }}
-          className="w-10 h-10 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 flex items-center justify-center shadow-xl transition-transform active:scale-95 cursor-pointer"
+          className="w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-sky-600 text-slate-200 hover:text-white border border-sky-500/30 flex items-center justify-center shadow-xl transition-all active:scale-95 cursor-pointer"
           title={t.zoomOut}
         >
-          <Minus className="w-4 h-4 text-sky-400" />
+          <Minus className="w-4 h-4 text-sky-400 hover:text-white" />
         </button>
         <button
           onClick={() => {
             handleSelectPreset('isometric');
             showToast(t.toastResetIso);
           }}
-          className="w-10 h-10 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 flex items-center justify-center shadow-xl transition-transform active:scale-95 cursor-pointer"
-          title={t.resetView}
+          className="w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-sky-600 text-slate-200 hover:text-white border border-sky-500/30 flex items-center justify-center shadow-xl transition-all active:scale-95 cursor-pointer"
+          title="Isometric 3/4 View"
         >
           <RotateCcw className="w-4 h-4 text-emerald-400" />
         </button>
         <button
+          onClick={() => {
+            handleSelectPreset('plan');
+            showToast('BIM Plan View');
+          }}
+          className="w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-sky-600 text-slate-200 hover:text-white border border-sky-500/30 flex items-center justify-center shadow-xl transition-all active:scale-95 cursor-pointer"
+          title="BIM Plan View (Top-Down)"
+        >
+          <Compass className="w-4 h-4 text-amber-400" />
+        </button>
+        <button
+          onClick={() => {
+            handleSetDisplayMode(displayMode === 'realistic' ? 'cutaway' : 'realistic');
+            showToast(displayMode === 'realistic' ? t.toastModeCutaway : t.toastModeRealistic);
+          }}
+          className={`w-9 h-9 rounded-xl border flex items-center justify-center shadow-xl transition-all active:scale-95 cursor-pointer ${
+            displayMode === 'cutaway'
+              ? 'bg-amber-500 border-amber-400 text-white'
+              : 'bg-slate-900/90 hover:bg-sky-600 text-slate-200 hover:text-white border-sky-500/30'
+          }`}
+          title="Cutaway X-Ray Mode"
+        >
+          <Eye className="w-4 h-4" />
+        </button>
+        <button
           onClick={() => setIsKeyboardModalOpen(true)}
-          className="w-10 h-10 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 flex items-center justify-center shadow-xl transition-transform active:scale-95 cursor-pointer"
+          className="w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60 flex items-center justify-center shadow-xl transition-all active:scale-95 cursor-pointer"
           title={t.shortcutsGuide}
         >
-          <Keyboard className="w-4 h-4 text-amber-400" />
+          <Keyboard className="w-3.5 h-3.5" />
         </button>
       </div>
 
