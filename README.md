@@ -142,6 +142,23 @@ npm run build
 npm run start
 ```
 
+### Intégration Directe dans GitHub (Script Python Automatisé)
+
+Un script Python autonome est inclus dans `scripts/github_sync.py` (sans dépendance externe) pour initialiser, créer le dépôt sur votre compte GitHub et envoyer automatiquement le code :
+
+```bash
+# Lancement interactif (vous demandera votre token GitHub et le nom du dépôt) :
+python scripts/github_sync.py
+
+# Ou en une seule commande avec vos paramètres :
+python scripts/github_sync.py --repo ecofarm-circular --token ghp_VOTRE_TOKEN_GITHUB
+
+# Options disponibles :
+# --private    : Créer le dépôt GitHub en mode privé (par défaut public)
+# --message    : Message personnalisé pour le commit
+# --org        : Déployer vers une organisation GitHub plutôt qu'un compte personnel
+```
+
 ---
 
 ## 8. Paramètres de Simulation & Supervision IA
