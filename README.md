@@ -1,176 +1,188 @@
-# ECOFARM CIRCULAR — Visualisation 3D Industrielle & Jumeau Numérique
+# ECOFARM CIRCULAR — 3D Industrial Engineering & Digital Twin
 
-> **Projet d'Ingénierie & d'Architecture Industrielle**  
-> Unité pilote intelligente de valorisation thermochimique de la biomasse agricole par pyrolyse, stockage d'énergie thermique hybride sur lit de sable et séchage convectif automatisé.
-
----
-
-## Sommaire
-- [1. Présentation du Projet](#1-présentation-du-projet)
-- [2. Les 6 Zones Fonctionnelles](#2-les-6-zones-fonctionnelles)
-- [3. Logique des Circuits & Interverrouillage de Sécurité](#3-logique-des-circuits--interverrouillage-de-sécurité)
-- [4. Modes de Visualisation 3D](#4-modes-de-visualisation-3d)
-- [5. Contrôles, Touches & Raccourcis Clavier](#5-contrôles-touches--raccourcis-clavier)
-- [6. Architecture Technique](#6-architecture-technique)
-- [7. Installation & Lancement](#7-installation--lancement)
-- [8. Paramètres de Simulation & Supervision IA](#8-paramètres-de-simulation--supervision-ia)
+> **Industrial Engineering & Circular Architecture Showcase**  
+> An intelligent agricultural biomass valorization pilot plant integrating continuous pyrolysis, a high-temperature hybrid sand thermal energy storage battery, automated convective drying, and AI-assisted enthalpy dispatch.
 
 ---
 
-## 1. Présentation du Projet
-
-**ECOFARM CIRCULAR** est un modèle d'ingénierie circulaire visant à transformer des résidus agricoles hétérogènes (grignons d'olive, sarments de vigne, pailles, coques de fruits) en énergie propre et en **biochar à haute valeur agronomique** (> 82% de carbone fixe, séquestration négative nette de $\text{CO}_2$).
-
-Le cœur de l'innovation réside dans le couplage d'un **stockage thermique haute température sur sable de silice (Batterie à Sable)** avec :
-1. Une source solaire thermique (capteurs à tubes sous vide).
-2. La récupération thermique de la combustion contrôlée des gaz de pyrolyse (syngas).
-3. La conversion dynamique des surplus d'électricité photovoltaïque par thermoplongeurs électriques.
-
-Cette énergie thermique stockée alimente à la demande un **séchoir industriel continu**, conditionnant la biomasse avant son entrée dans le réacteur de pyrolyse.
+## Table of Contents
+- [1. Executive Overview](#1-executive-overview)
+- [2. The 6 Engineered Functional Zones](#2-the-6-engineered-functional-zones)
+- [3. Process Flow & Safety Interlock Logic](#3-process-flow--safety-interlock-logic)
+- [4. 3D Visualization & Cutaway Modes](#4-3d-visualization--cutaway-modes)
+- [5. Interactive Controls & Keybindings](#5-interactive-controls--keybindings)
+- [6. Technical Architecture](#6-technical-architecture)
+- [7. Installation & Deployment Guide](#7-installation--deployment-guide)
+- [8. Thermodynamic Simulation & AI Copilot](#8-thermodynamic-simulation--ai-copilot)
 
 ---
 
-## 2. Les 6 Zones Fonctionnelles
+## 1. Executive Overview
 
-| Zone | Dénomination | Rôle & Équipements Clés |
+**ECOFARM CIRCULAR** is an advanced circular bioeconomy engineering model designed to transform heterogeneous agricultural residues (olive pomace, vineyard prunings, straw, nut shells) into clean thermal energy and **high-purity biochar** (> 82% fixed carbon, delivering permanent negative net $\text{CO}_2$ emissions).
+
+The core technical innovation couples a **high-temperature solid quartz silica thermal battery (Sand Battery)** with three hybrid energy vectors:
+1. **Evacuated Tube Solar Thermal Array** (closed glycol circuit up to $180^\circ\text{C}$).
+2. **Pyrolysis Flue Gas Recovery** via a flameless thermal oxidizer ($350^\circ\text{C}$, eliminating raw syngas venting).
+3. **Dynamic Photovoltaic Surplus Conversion** via submerged high-power electrical immersion heaters.
+
+Stored thermal energy is discharged on demand to power an **automated continuous tray dryer**, ensuring optimal infeed conditions before thermochemical conversion in the pyrolysis retort.
+
+---
+
+## 2. The 6 Engineered Functional Zones
+
+| Zone | Designation | Engineering Role & Key Equipment |
 | :--- | :--- | :--- |
-| **Zone A** | **Réception & Préparation Biomasse** | Fosse de déchargement en béton avec rampe basculante hydraulique (15 t) et grille de sécurité, broyeur bi-rotor à haut couple & broyeur fin à marteaux, séparateur magnétique over-belt en néodyme, convoyeur à bande auget inclinée à 18° et trémie doseuse à pesons. |
-| **Zone B** | **Séchoir Continu Automatisé** | Tunnel calorifugé en acier inox (100 mm laine minérale), 3 étages de plateaux perforés agités, échangeur à tubes ailetés liquide-air, ventilateur centrifuge de circulation ($4\,500\,\text{m}^3/\text{h}$), sonde d'humidité capacitive et capteurs PT100, cheminée de buées avec dévésiculeur. |
-| **Zone C** | **Unité de Pyrolyse & Biochar** | Réacteur horizontal cylindrique en Inconel à double paroi ($450 - 550^\circ\text{C}$), colliers chauffants en céramique, vis sans fin hélicoïdale interne, cyclone séparateur de particules, oxydateur thermique / chambre de combustion sans flamme pour le syngas (*zéro rejet atmosphérique de gaz non traité*), échangeur de récupération des fumées vers la batterie à sable, vis de refroidissement et poste de collecte hermétique du biochar sous azote ($\text{N}_2$). |
-| **Zone D** | **Batterie Thermique à Sable** | Cuve verticale calorifugée ($\varnothing\,3,8\,\text{m} \times H\,4,8\,\text{m}$, 45 tonnes de sable de silice réfractaire, capacité $1,25\,\text{MWh}_{\text{th}}$ jusqu'à $500^\circ\text{C}$), faisceau de thermoplongeurs en Incoloy 800 (surplus PV), serpentins d'échange thermique en inox 316L, arbre vertical de 12 thermocouples stratifiés, skid de pompes de circulation d'huile thermique et vase d'expansion. |
-| **Zone E** | **Énergies Renouvelables** | Canopée structurelle en acier galvanisé accueillant 16 modules photovoltaïques monocristallins bifaciaux ($50\,\text{kWp}$), champ de collecteurs thermiques à tubes sous vide ($40\,\text{m}^2$), onduleur centralisé IP66, conteneur de batteries LFP ($60\,\text{kWh}$) et gaine de puissance vers les thermoplongeurs. |
-| **Zone F** | **Contrôle & Supervision SCADA / IA** | Cabine de commande préfabriquée avec vitrage panoramique, baies électriques industrielles IP55 avec automates programmables redondants (PLC Siemens S7-1500 / Modicon M580), pupitre opérateur triple écran HMI, colonne lumineuse de signalisation 3 couleurs et serveur IA d'optimisation énergétique (Gemini API). |
+| **Zone A** | **Biomass Reception & Preparation** | Inground reinforced concrete receiving bunker with safety grating, 15-ton hydraulic tipping ramp, high-torque dual-shaft shredder and fine hammer mill (7.5 kW), over-belt neodymium permanent magnetic separator, 18° inclined troughed belt conveyor, and loss-in-weight surge metering hopper with calibrated load cells. |
+| **Zone B** | **Automated Continuous Tray Dryer** | Modular insulated stainless steel drying tunnel (100 mm mineral wool), triple perforated agitated conveyor trays, copper-aluminum finned tube liquid-to-air heat exchanger, centrifugal hot air circulation blower ($4,500\,\text{m}^3/\text{h}$), in-line capacitive moisture sensors and PT100 RTD transmitters, and moisture exhaust stack with demister column. |
+| **Zone C** | **Industrial Pyrolysis Unit** | Continuous double-walled Inconel retort tube with internal ribbon auger screw ($450 - 550^\circ\text{C}$), segmented ceramic band electric heaters, high-efficiency multi-cone cyclone particulate separator, controlled syngas flameless thermal oxidizer (*zero uncombusted atmospheric emissions*), flue-gas shell-and-tube heat exchanger to sand battery, water-cooled biochar discharge screw, and hermetic nitrogen-purged ($\text{N}_2$) collection drum station. |
+| **Zone D** | **Hybrid Sand Thermal Battery** | Cylindrical insulated steel vessel ($\varnothing\,3.8\,\text{m} \times H\,4.8\,\text{m}$, 45 metric tons of refractory quartz silica sand, $1.25\,\text{MWh}_{\text{th}}$ storage capacity up to $500^\circ\text{C}$), flanged Incoloy 800 electrical immersion heaters (75 kW total for PV surplus), internal spiral 316L stainless steel heat exchanger tube bundles, 12-point vertical thermal stratification thermocouple tree, redundant thermal fluid circulation skid, and expansion tank with safety relief valves. |
+| **Zone E** | **Renewable Solar Integration** | Structural steel canopy supporting 16 bifacial monocrystalline PV panels ($50\,\text{kWp}$), evacuated glass tube solar thermal collectors ($40\,\text{m}^2$ aperture area), centralized IP66 3-phase hybrid inverter ($60\,\text{kVA}$), auxiliary $60\,\text{kWh}$ Lithium Iron Phosphate (LFP) battery rack, and thyristor power controllers for rapid immersion heater throttling. |
+| **Zone F** | **SCADA Automation & AI Control Room** | Prefabricated climate-controlled control cabin with panoramic safety glazing, Rittal IP55 industrial electrical cabinets with redundant PLCs (Siemens S7-1500 / Modicon M580), triple-monitor operator workstation running real-time SCADA HMI synoptics, 3-color industrial signal stack light tower, and Gemini AI edge optimization gateway. |
 
 ---
 
-## 3. Logique des Circuits & Interverrouillage de Sécurité
+## 3. Process Flow & Safety Interlock Logic
 
-### Flux Matière
-$$\text{Résidus bruts} \longrightarrow \text{Broyage} \longrightarrow \text{Convoyeur} \longrightarrow \text{Séchoir (Zone B)} \longrightarrow \text{Pyrolyse (Zone C)} \longrightarrow \text{Biochar Collecté}$$
+### Material Flow Pipeline
+$$\text{Raw Agricultural Residues} \longrightarrow \text{Shredder} \longrightarrow \text{Inclined Conveyor} \longrightarrow \text{Tray Dryer (Zone B)} \longrightarrow \text{Pyrolysis Retort (Zone C)} \longrightarrow \text{Biochar Carbon Sink}$$
 
-### Circuits Énergétiques Colorés
-- **Jaune / Ambre** : Circuit fermé solaire thermique glycolé ($180^\circ\text{C}$) $\to$ Batterie à sable.
-- **Rouge** : Récupération thermique des fumées de combustion du syngas ($350^\circ\text{C}$) $\to$ Batterie à sable.
-- **Doré / Électrique** : Déviation directe du surplus de production photovoltaïque $\to$ Thermoplongeurs de la batterie à sable.
-- **Cyan / Bleu clair** : Boucle de décharge d'huile thermique propre ($130^\circ\text{C}$) $\to$ Échangeur du séchoir de biomasse.
-- **Bleu foncé** : Retour de fluide caloporteur refroidi ($70^\circ\text{C}$) $\to$ Batterie à sable.
-- **Vert** : Ligne de transport de biomasse brute.
-- **Anthracite** : Décharge du biochar stabilisé.
+### Color-Coded Energy Circuits
+- **Amber / Yellow**: Closed-loop solar thermal glycol circuit ($180^\circ\text{C}$) $\to$ Sand Battery.
+- **Red**: Recovered syngas combustion flue gas loop ($350^\circ\text{C}$) $\to$ Sand Battery.
+- **Golden / Electric**: Dynamic surplus photovoltaic generation $\to$ Incoloy immersion heaters.
+- **Cyan / Light Blue**: Clean hot thermal fluid discharge loop ($130^\circ\text{C}$) $\to$ Biomass dryer heat exchanger.
+- **Deep Blue**: Cooled return fluid ($70^\circ\text{C}$) $\to$ Sand Battery.
+- **Green**: Raw and prepared granular biomass handling line.
+- **Anthracite**: Stabilized biochar discharge line.
 
-### Interverrouillage Automatisé (Dryer Interlock)
-> **Règle de sécurité critique** : Le séchoir à biomasse ne fonctionne que si la température interne de la batterie à sable est $\ge 180^\circ\text{C}$ (SOC $\ge 35\%$). En deçà, l'automate engage l'interverrouillage de sécurité (**INHIBITED**) et coupe l'alimentation thermique du séchoir pour éviter toute rupture d'enthalpie.
-
----
-
-## 4. Modes de Visualisation 3D
-
-1. **Rendu Réaliste PBR Industriel** : Matériaux physiques haute fidélité (acier galvanisé, inox poli, béton armé avec joints de dilatation et zébras de sécurité, verre optique, isolation thermique matelassée).
-2. **Mode Écorché (Cutaway X-Ray)** : Les parois externes des cuves et tunnels deviennent translucides afin d'observer :
-   - Le massif interne de sable de quartz doré.
-   - Les thermoplongeurs électriques submergés.
-   - Les serpentins internes d'échange thermique.
-   - La vis hélicoïdale interne du réacteur de pyrolyse.
-   - Les plateaux perforés internes de séchage.
-3. **Carte Thermique (Thermal Heatmap)** : Coloration dynamique des équipements selon leur température de service ($25^\circ\text{C}$ bleu ambiant $\to 85^\circ\text{C}$ séchage $\to 450^\circ\text{C}$ batterie à sable $\to 520^\circ\text{C}$ pyrolyse rouge incandescent).
+### Automated Dryer Safety Interlock
+> **Critical Operational Constraint**: The biomass drying convective loop requires a minimum thermal threshold in the Sand Battery of $\ge 180^\circ\text{C}$ (SOC $\ge 35\%$). When the core drops below this threshold, the safety PLC triggers an automatic interlock (**INHIBITED**), safely idling the dryer conveyor to prevent thermal deficit until storage enthalpy is replenished.
 
 ---
 
-## 5. Contrôles, Touches & Raccourcis Clavier
+## 4. 3D Visualization & Cutaway Modes
 
-L'application supporte le clavier complet, la souris et les écrans tactiles :
-
-| Touche / Commande | Fonction |
-| :--- | :--- |
-| **`H`** | Masquer / Afficher le panneau de commande inférieur (*Mode Zen*) |
-| **`Espace`** | Pause / Reprise de l'animation des flux et particules |
-| **`M`** | Changer de mode de rendu (*Réaliste $\to$ Écorché $\to$ Thermique*) |
-| **`0` ou `I`** | Vue Isométrique $\frac{3}{4}$ globale |
-| **`P`** | Vue en Plan orthogonale (Top-Down BIM) |
-| **`1` ou `A`** | Caméra Zone A (Réception Biomasse) |
-| **`2` ou `B`** | Caméra Zone B (Séchoir Industriel) |
-| **`3` ou `C`** | Caméra Zone C (Unité de Pyrolyse) |
-| **`4` ou `D`** | Caméra Zone D (Batterie Thermique à Sable) |
-| **`5` ou `E`** | Caméra Zone E (Solaire PV & Thermique) |
-| **`6` ou `F`** | Caméra Zone F (Poste de Contrôle & SCADA) |
-| **`+` / `-`** *(ou `Z`/`X`)* | Zoom avant / Zoom arrière |
-| **`Échap`** | Fermer les fenêtres modales ouvertes |
-| **`?` ou `K`** | Ouvrir le Guide des Touches |
-| **Clic / Touch 3D** | Cliquer ou toucher n'importe quel équipement 3D ouvre sa fiche technique P&ID |
+1. **Realistic PBR Industrial Mode**: Physically based rendering featuring realistic industrial materials (galvanized structural steel, polished stainless steel, non-slip textured concrete slabs, safety warning striping, optical canopy glass, and thermal insulation lagging).
+2. **Cutaway (X-Ray) Mode**: Outer vessel walls and machine hulls become semi-transparent, revealing:
+   - The glowing internal refractory quartz sand bed.
+   - Submerged Incoloy immersion heating elements.
+   - Internal spiral heat exchanger tube circuits.
+   - The internal helical ribbon auger of the pyrolysis retort.
+   - Agitated perforated drying conveyor trays.
+3. **Thermal Heatmap Mode**: Color-maps components according to operational temperatures ($25^\circ\text{C}$ ambient blue $\to 85^\circ\text{C}$ drying $\to 445^\circ\text{C}$ sand battery $\to 520^\circ\text{C}$ glowing red pyrolysis retort).
 
 ---
 
-## 6. Architecture Technique
+## 5. Interactive Controls & Keybindings
 
-- **Framework** : Next.js 15+ (App Router, Server Components & Client Leaf Nodes)
-- **Moteur 3D** : Three.js (r187) avec WebGL2, détection automatique Software WebGL, tone-mapping ACESFilmic, et textures procédurales 100% autonomes (zéro dépendance externe, zéro erreur 404).
-- **Styles & Interface** : Tailwind CSS v4, Lucide React, animations `motion`.
-- **Moteur de Simulation** : Modèle thermodynamique réel calculant les débits massiques, l'évaporation de l'eau, le rendement en syngas et biochar, et la séquestration nette de $\text{CO}_2$.
-- **Intelligence Artificielle** : SDK `@google/genai` (modèle `gemini-2.5-flash`) en Server Route sécurisée (`/api/gemini/optimize`) pour l'optimisation en temps réel des consignes de délestage énergétique.
+Full multi-modal control via keyboard, mouse, and multi-touch gestures:
+
+| Key / Control | Function | Category |
+| :--- | :--- | :--- |
+| **`H`** | Show / Hide Bottom Control Dock (*Zen Mode*) | Interface |
+| **`Space`** | Pause / Resume Process Streamlines Animation | Animation |
+| **`M`** | Toggle Render Mode (*Realistic $\to$ Cutaway $\to$ Thermal*) | 3D Render |
+| **`0` or `I`** | Reset to Isometric $\frac{3}{4}$ Overview | Camera |
+| **`P`** | BIM Orthogonal Top-Down Plan View | Camera |
+| **`1` or `A`** | Focus Camera on Zone A (Biomass Intake) | Zone |
+| **`2` or `B`** | Focus Camera on Zone B (Convective Dryer) | Zone |
+| **`3` or `C`** | Focus Camera on Zone C (Pyrolysis Retort) | Zone |
+| **`4` or `D`** | Focus Camera on Zone D (Sand Thermal Battery) | Zone |
+| **`5` or `E`** | Focus Camera on Zone E (Solar PV & Thermal) | Zone |
+| **`6` or `F`** | Focus Camera on Zone F (SCADA Control Room) | Zone |
+| **`+` / `-`** *(or `Z`/`X`)* | Zoom In / Zoom Out | Navigation |
+| **`Esc`** | Close open modal dialogues and inspector panels | Interface |
+| **`?` or `K`** | Open Keyboard & Touch Navigation Guide | Help |
+| **Click / Tap 3D** | Inspect any machine directly in the 3D viewport | P&ID Inspector |
 
 ---
 
-## 7. Installation & Lancement
+## 6. Technical Architecture
 
-### Prérequis
-- Node.js 18+ ou 20+
-- Clé d'API Gemini (`GEMINI_API_KEY`) définie dans l'environnement
+- **Web Frontend**: Next.js 15+ (App Router, Server Components & Client Leaf Nodes)
+- **3D Graphics Engine**: Three.js (r187) with WebGL2, automatic Software WebGL fallback, ACESFilmic tone mapping, and 100% self-contained procedural textures (zero external 404 dependencies).
+- **Streamlit Cloud Layer**: `app.py` + `lib/streamlit_3d.py` with embedded autonomous Three.js WebGL component (resolves Google 403 iframe errors on Streamlit Cloud).
+- **Styles**: Tailwind CSS v4, Lucide React icons, and `motion` transitions.
+- **Thermodynamic Engine**: First-principles physical calculations (mass conservation, water vaporization enthalpy, syngas generation, biochar fixed carbon yield, and net $\text{CO}_2$ sequestration).
+- **AI Optimization**: `@google/genai` TypeScript SDK (`gemini-2.5-flash` model) deployed via secure Next.js API route (`/api/gemini/optimize`) for real-time dispatch recommendations.
 
-### Déploiement Local
+---
+
+## 7. Installation & Deployment Guide
+
+### Prerequisites
+- Node.js 18+ or 20+
+- Python 3.10+ (for Streamlit Cloud or local Streamlit deployment)
+- Optional Gemini API Key (`GEMINI_API_KEY`)
+
+### Local Web App (Next.js)
 
 ```bash
-# 1. Cloner ou ouvrir le projet
+# 1. Clone repository
+git clone https://github.com/your-username/ecofarm-circular.git
 cd ecofarm-circular
 
-# 2. Installer les dépendances
+# 2. Install dependencies
 npm install
 
-# 3. Configurer l'environnement
+# 3. Environment configuration
 cp .env.example .env.local
-# Renseigner GEMINI_API_KEY="votre_clé_ici"
+# Set GEMINI_API_KEY="your_api_key_here" in .env.local
 
-# 4. Lancer le serveur de développement
+# 4. Start development server
 npm run dev
 
-# 5. Ouvrir dans le navigateur
-# http://localhost:3000
+# 5. Open browser at http://localhost:3000
 ```
 
-### Build de Production
+### Production Build
 
 ```bash
 npm run build
 npm run start
 ```
 
-### Intégration Directe dans GitHub (Script Python Automatisé)
+### Streamlit Cloud Deployment
 
-Un script Python autonome est inclus dans `scripts/github_sync.py` (sans dépendance externe) pour initialiser, créer le dépôt sur votre compte GitHub et envoyer automatiquement le code :
+1. Set **Main file path** to `app.py`.
+2. Ensure `requirements.txt` is present at the repository root.
+3. Configure optional secrets in Streamlit Cloud Dashboard (`Settings` $\to$ `Secrets`):
+   ```toml
+   GEMINI_API_KEY = "your_gemini_api_key"
+   GITHUB_TOKEN = "your_github_token"
+   ```
+
+### Automated GitHub Synchronization Script
+
+A standalone Python script is included in `scripts/github_sync.py` (zero external dependencies, uses Python 3 standard library):
 
 ```bash
-# Lancement interactif (vous demandera votre token GitHub et le nom du dépôt) :
+# Interactive mode (prompts for token and repository name):
 python scripts/github_sync.py
 
-# Ou en une seule commande avec vos paramètres :
-python scripts/github_sync.py --repo ecofarm-circular --token ghp_VOTRE_TOKEN_GITHUB
+# Non-interactive command-line execution:
+python scripts/github_sync.py --repo ecofarm-circular --token ghp_YOUR_TOKEN
 
-# Options disponibles :
-# --private    : Créer le dépôt GitHub en mode privé (par défaut public)
-# --message    : Message personnalisé pour le commit
-# --org        : Déployer vers une organisation GitHub plutôt qu'un compte personnel
+# Additional options:
+# --private    : Create the GitHub repository in private mode (default: public)
+# --message    : Custom commit message
+# --org        : Deploy to a GitHub organization instead of a personal account
 ```
 
 ---
 
-## 8. Paramètres de Simulation & Supervision IA
+## 8. Thermodynamic Simulation & AI Copilot
 
-Dans l'onglet **"Thermodynamic Sim"** du panneau inférieur, vous pouvez modifier en temps réel :
-- **Irradiation Solaire ($0 - 1\,000\,\text{W/m}^2$)** : influence directe sur la puissance PV générée et le circuit solaire thermique.
-- **Débit d'Alimentation Biomasse ($20 - 200\,\text{kg/h}$)** : calcule la charge du broyeur, la demande d'évaporation du séchoir et la production de biochar.
-- **SOC Batterie à Sable ($10 - 100\%$)** : déclenche ou inhibe dynamiquement le séchoir via l'interverrouillage automatique.
-- **Température de Pyrolyse ($400 - 650^\circ\text{C}$)** : ajuste le ratio syngas combustible / biochar et la chaleur récupérée.
+In the **"Thermodynamic Sim"** tab of the bottom dock (or sidebar in Streamlit), operators can adjust in real time:
+- **Solar Irradiance ($0 - 1,000\,\text{W/m}^2$)**: Drives PV generation and evacuated solar thermal output.
+- **Biomass Infeed Rate ($20 - 200\,\text{kg/h}$)**: Modulates shredder load, moisture evaporation duty, and biochar output.
+- **Sand Battery SOC ($10 - 100\%$)**: Dynamically engages or disengages the convective dryer interlock.
+- **Pyrolysis Retort Temp ($400 - 650^\circ\text{C}$)**: Dictates combustible syngas yield versus biochar fixed carbon ratio.
 
-En cliquant sur **"AI Energy Dispatch"**, l'assistant Gemini analyse instantanément le bilan d'enthalpie globale et prescrit les consignes de dispatching optimales pour maximiser le COP de l'installation.
+Clicking **"AI Energy Dispatch"** queries the Gemini copilot with live telemetry vectors to receive prioritized PLC setpoints and enthalpy optimization directives.
 
 ---
 
-*Projet ECOFARM CIRCULAR — Conçu pour l'ingénierie énergétique industrielle et la compétition internationale d'architecture circulaire.*
+*ECOFARM CIRCULAR — Engineered for industrial sustainability and circular bioeconomy excellence.*

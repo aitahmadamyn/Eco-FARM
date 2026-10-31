@@ -1,28 +1,16 @@
 'use client';
 
 import React from 'react';
-import { X, Keyboard, Command } from 'lucide-react';
+import { X, Keyboard } from 'lucide-react';
+import { Language, translations } from '@/lib/i18n';
 
 interface KeyboardShortcutsModalProps {
   onClose: () => void;
+  lang?: Language;
 }
 
-export function KeyboardShortcutsModal({ onClose }: KeyboardShortcutsModalProps) {
-  const shortcuts = [
-    { key: 'H', desc: 'Masquer / Afficher les contrôles (Mode Zen)', tag: 'Interface' },
-    { key: 'Espace', desc: 'Pause / Reprendre l’animation des flux', tag: 'Animation' },
-    { key: 'M', desc: 'Changer le mode de rendu (Réaliste / Écorché / Thermique)', tag: 'Rendu 3D' },
-    { key: '0 ou I', desc: 'Vue Isométrique 3/4 (Vue Globale)', tag: 'Caméra' },
-    { key: 'P', desc: 'Vue en Plan (BIM Top-Down)', tag: 'Caméra' },
-    { key: '1 ou A', desc: 'Zone A – Réception & Broyage Biomasse', tag: 'Zone' },
-    { key: '2 ou B', desc: 'Zone B – Séchoir Continu Automatisé', tag: 'Zone' },
-    { key: '3 ou C', desc: 'Zone C – Unité de Pyrolyse & Biochar', tag: 'Zone' },
-    { key: '4 ou D', desc: 'Zone D – Batterie Thermique à Sable', tag: 'Zone' },
-    { key: '5 ou E', desc: 'Zone E – Intégration Solaire PV & Thermique', tag: 'Zone' },
-    { key: '6 ou F', desc: 'Zone F – Salle de Commande SCADA & IA', tag: 'Zone' },
-    { key: '+ / -', desc: 'Zoom Avant / Zoom Arrière', tag: 'Navigation' },
-    { key: 'Échap', desc: 'Fermer les fenêtres et panneaux', tag: 'Interface' },
-  ];
+export function KeyboardShortcutsModal({ onClose, lang = 'en' }: KeyboardShortcutsModalProps) {
+  const t = translations[lang];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
@@ -34,23 +22,23 @@ export function KeyboardShortcutsModal({ onClose }: KeyboardShortcutsModalProps)
             </div>
             <div>
               <h2 className="text-sm font-bold text-slate-100">
-                Guide des Touches & Raccourcis Clavier
+                {t.shortcutsTitle}
               </h2>
               <p className="text-[11px] text-slate-400">
-                Navigation rapide et raccourcis interactifs de l’usine ECOFARM
+                {t.shortcutsSubtitle}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2 text-xs">
-          {shortcuts.map((sc, i) => (
+          {t.shortcutsList.map((sc, i) => (
             <div
               key={i}
               className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/40 border border-slate-700/50 hover:border-sky-500/40 transition-colors"
@@ -70,13 +58,13 @@ export function KeyboardShortcutsModal({ onClose }: KeyboardShortcutsModalProps)
 
         <div className="p-3 bg-slate-800/80 border-t border-slate-700/80 flex items-center justify-between">
           <span className="text-[11px] text-slate-400">
-            Astuce : Cliquez ou touchez directement n’importe quel équipement 3D pour l’inspecter.
+            {t.shortcutsTip}
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold transition-colors"
+            className="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer"
           >
-            Compris
+            {t.gotIt}
           </button>
         </div>
       </div>

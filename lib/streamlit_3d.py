@@ -4,17 +4,17 @@ Génère une page HTML/WebGL Three.js autonome ultra-performante et 100% embarqu
 (Aucun serveur externe requis -> Élimine définitivement toute erreur 403 Google).
 """
 
-def get_3d_viewer_html(telemetry: dict) -> str:
+def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
     sand_temp = round(telemetry.get("sand_core_c", 445))
     sand_soc = round(telemetry.get("sand_soc", 78))
     pyro_temp = round(telemetry.get("pyro_temp_c", 520)) if "pyro_temp_c" in telemetry else 520
     solar_kw = round(telemetry.get("pv_kw", 41.2) + telemetry.get("st_kw", 28.4), 1)
     is_interlocked = telemetry.get("dryer_interlocked", False)
-    dryer_status_text = "INTERVERROUILLÉ (<180°C)" if is_interlocked else "EN SERVICE (48.5 kW)"
+    dryer_status_text = "INTERLOCKED (<180°C)" if is_interlocked else "ARMED & RUNNING (48.5 kW)"
     dryer_status_color = "#f43f5e" if is_interlocked else "#22c55e"
 
     return f"""<!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -258,112 +258,112 @@ def get_3d_viewer_html(telemetry: dict) -> str:
 <body>
     <div id="canvas-container"></div>
 
-    <!-- HUD Supérieur -->
+    <!-- HUD Header -->
     <div class="hud-header">
         <div class="badge-title">
             <h1>ECOFARM CIRCULAR — Digital Twin</h1>
-            <p>Pyrolyse • Batterie Thermique à Sable (45t) • Séchage Continu</p>
+            <p>Pyrolysis • Hybrid Sand Thermal Battery (45t) • Automated Drying</p>
         </div>
         <div class="live-stats">
             <div class="stat-pill">
-                <span style="color: #f59e0b;">🔥 Sable:</span>
+                <span style="color: #f59e0b;">🔥 Sand:</span>
                 <span style="font-weight: bold; color: #fbbf24;">{sand_temp}°C ({sand_soc}%)</span>
             </div>
             <div class="stat-pill">
-                <span style="color: #38bdf8;">☀️ Solaire:</span>
+                <span style="color: #38bdf8;">☀️ Solar:</span>
                 <span style="font-weight: bold; color: #7dd3fc;">{solar_kw} kW</span>
             </div>
             <div class="stat-pill">
-                <span style="color: {dryer_status_color};">⚡ Séchoir:</span>
+                <span style="color: {dryer_status_color};">⚡ Dryer:</span>
                 <span style="font-weight: bold; color: {dryer_status_color};">{dryer_status_text}</span>
             </div>
         </div>
     </div>
 
     <!-- Toast Notification -->
-    <div id="toast">Action effectuée</div>
+    <div id="toast">Action completed</div>
 
-    <!-- Fiche descriptive de zone (au clic 3D) -->
+    <!-- Zone Information Card (on 3D click/tap) -->
     <div id="zone-card">
         <div class="zone-card-header">
             <span class="zone-tag" id="zc-tag">ZONE D</span>
             <button class="close-card" onclick="hideZoneCard()">✕</button>
         </div>
-        <div class="zone-title" id="zc-title">Batterie Thermique à Sable</div>
-        <div class="zone-desc" id="zc-desc">Description de la zone...</div>
+        <div class="zone-title" id="zc-title">Hybrid Sand Thermal Battery</div>
+        <div class="zone-desc" id="zc-desc">Zone engineering specifications...</div>
         <div class="zone-specs" id="zc-specs">
-            <div>• Température: 445 °C</div>
-            <div>• Capacité: 1.25 MWh_th</div>
+            <div>• Core Temp: 445 °C</div>
+            <div>• Capacity: 1.25 MWh_th</div>
         </div>
     </div>
 
-    <!-- Toolbar Flottante Droite -->
+    <!-- Floating Right Toolbar -->
     <div class="toolbar-right">
-        <button class="tool-btn" onclick="zoomCam(-4)" title="Zoom Avant (+)">+</button>
-        <button class="tool-btn" onclick="zoomCam(4)" title="Zoom Arrière (-)">−</button>
-        <button class="tool-btn" onclick="setCameraPreset('iso')" title="Vue Isométrique Globale">↺</button>
-        <button class="tool-btn" onclick="setCameraPreset('plan')" title="Vue en Plan (Top-Down)">📐</button>
-        <button class="tool-btn" onclick="toggleCutaway()" id="btn-cutaway-side" title="Mode Écorché X-Ray">👁️</button>
+        <button class="tool-btn" onclick="zoomCam(-4)" title="Zoom In (+)">+</button>
+        <button class="tool-btn" onclick="zoomCam(4)" title="Zoom Out (-)">−</button>
+        <button class="tool-btn" onclick="setCameraPreset('iso')" title="Isometric 3/4 View">↺</button>
+        <button class="tool-btn" onclick="setCameraPreset('plan')" title="BIM Plan View (Top-Down)">📐</button>
+        <button class="tool-btn" onclick="toggleCutaway()" id="btn-cutaway-side" title="Cutaway X-Ray Mode">👁️</button>
     </div>
 
-    <!-- Dock Inférieur de Navigation & Rendu -->
+    <!-- Bottom Navigation & Rendering Dock -->
     <div class="dock-bottom">
         <div class="dock-group">
-            <button class="dock-btn active" id="btn-iso" onclick="setCameraPreset('iso')">Isométrique 3/4</button>
-            <button class="dock-btn" id="btn-plan" onclick="setCameraPreset('plan')">Plan BIM</button>
+            <button class="dock-btn active" id="btn-iso" onclick="setCameraPreset('iso')">Isometric 3/4</button>
+            <button class="dock-btn" id="btn-plan" onclick="setCameraPreset('plan')">BIM Plan</button>
         </div>
         <div class="dock-group">
-            <button class="dock-btn" onclick="setCameraPreset('zoneA')">Zone A (Biomasse)</button>
-            <button class="dock-btn" onclick="setCameraPreset('zoneB')">Zone B (Séchoir)</button>
-            <button class="dock-btn" onclick="setCameraPreset('zoneC')">Zone C (Pyrolyse)</button>
-            <button class="dock-btn" onclick="setCameraPreset('zoneD')">Zone D (Sable)</button>
-            <button class="dock-btn" onclick="setCameraPreset('zoneE')">Zone E (Solaire)</button>
+            <button class="dock-btn" onclick="setCameraPreset('zoneA')">Zone A (Biomass)</button>
+            <button class="dock-btn" onclick="setCameraPreset('zoneB')">Zone B (Dryer)</button>
+            <button class="dock-btn" onclick="setCameraPreset('zoneC')">Zone C (Pyrolysis)</button>
+            <button class="dock-btn" onclick="setCameraPreset('zoneD')">Zone D (Sand)</button>
+            <button class="dock-btn" onclick="setCameraPreset('zoneE')">Zone E (Solar)</button>
             <button class="dock-btn" onclick="setCameraPreset('zoneF')">Zone F (SCADA)</button>
         </div>
         <div class="dock-group">
-            <button class="dock-btn" id="btn-cutaway" onclick="toggleCutaway()">Écorché X-Ray</button>
-            <button class="dock-btn" id="btn-flow" onclick="toggleFlow()">Flux: Actifs</button>
+            <button class="dock-btn" id="btn-cutaway" onclick="toggleCutaway()">Cutaway X-Ray</button>
+            <button class="dock-btn" id="btn-flow" onclick="toggleFlow()">Flow: Active</button>
         </div>
     </div>
 
     <script>
-        // Données complètes des 6 zones fonctionnelles
+        // Full engineering specifications for the 6 functional zones
         const ZONES = {{
             zoneA: {{
                 tag: 'ZONE A',
-                title: 'Réception & Broyage Biomasse',
-                desc: 'Fosse de déchargement inground avec grille, broyeur fin à marteaux, séparateur magnétique et convoyeur à bande incliné 18°.',
-                specs: '• Débit: 120 kg/h\\n• Humidité: 45 %\\n• Moteur broyeur: 7.5 kW'
+                title: 'Biomass Reception & Shredding',
+                desc: 'Inground receiving pit with safety grate, heavy-duty hammer mill, magnetic separator and 18° inclined belt conveyor.',
+                specs: '• Capacity: 120 kg/h\\n• Moisture: 45 %\\n• Shredder motor: 7.5 kW'
             }},
             zoneB: {{
                 tag: 'ZONE B',
-                title: 'Séchoir Continu Automatisé',
-                desc: 'Tunnel inox isolé 100 mm à 3 étages de plateaux perforés oscillants. Air chaud pulsé via échangeur raccordé à la batterie à sable.',
-                specs: '• Température: 85 °C\\n• Débit air: 4 200 m³/h\\n• Humidité sortie: 10.5 %'
+                title: 'Automated Continuous Tray Dryer',
+                desc: 'Modular insulated stainless steel tunnel with 3 perforated oscillating conveyor trays. Convective clean hot air supplied via sand battery heat exchanger.',
+                specs: '• Temperature: 85 °C\\n• Air flow: 4,200 m³/h\\n• Output moisture: 10.5 %'
             }},
             zoneC: {{
                 tag: 'ZONE C',
-                title: 'Unité de Pyrolyse & Biochar',
-                desc: 'Retort horizontal en Inconel étanche (520°C). Cyclone séparateur, oxydateur thermique sans flamme et fût de biochar sous N2.',
-                specs: '• T° Lit: 520 °C\\n• Biochar: 38.5 kg/h (C > 82%)\\n• Récupération Syngas: 62 kW_th'
+                title: 'Pyrolysis Unit & Biochar Retort',
+                desc: 'Sealed horizontal Inconel retort (520°C). Multi-cyclone separator, flameless thermal oxidizer and hermetic nitrogen-purged biochar drum station.',
+                specs: '• Bed Temp: 520 °C\\n• Biochar: 38.5 kg/h (C > 82%)\\n• Syngas Recovery: 62 kW_th'
             }},
             zoneD: {{
                 tag: 'ZONE D',
-                title: 'Batterie Thermique à Sable (Hero)',
-                desc: 'Cuve calorifugée de 45 t de sable de quartz (500°C). 3 sources de charge: Solaire Th, Récupération Pyrolyse, Surplus PV.',
-                specs: '• T° Cœur: {sand_temp} °C\\n• Capacité: 1.25 MWh_th\\n• Décharge séchoir: 48.5 kW_th'
+                title: 'Hybrid Sand Thermal Battery (Hero)',
+                desc: 'Insulated vessel with 45 t of refractory quartz sand (up to 500°C). 3 hybrid charging vectors: Solar thermal, pyrolysis syngas recovery, and PV surplus immersion heaters.',
+                specs: '• Core Temp: {sand_temp} °C\\n• Capacity: 1.25 MWh_th\\n• Dryer discharge: 48.5 kW_th'
             }},
             zoneE: {{
                 tag: 'ZONE E',
-                title: 'Intégration Solaire PV & Thermique',
-                desc: 'Canopée acier supportant 16 modules PV monocristallins (50 kWp) et 40 m² de capteurs à tubes sous vide. BESS LFP 60 kWh.',
-                specs: '• Puissance PV: 41.2 kW\\n• Solaire Th: 28.4 kW\\n• Surplus vers sable: 26.8 kW'
+                title: 'Solar PV & Thermal Integration',
+                desc: 'Steel canopy supporting 16 bifacial PV modules (50 kWp) and 40 m² evacuated tube solar collectors. 60 kWh LFP BESS battery.',
+                specs: '• PV Power: 41.2 kW\\n• Solar Thermal: 28.4 kW\\n• Surplus to sand: 26.8 kW'
             }},
             zoneF: {{
                 tag: 'ZONE F',
-                title: 'Poste de Contrôle SCADA & IA',
-                desc: 'Cabine opérateur avec vitrage panoramique, armoires PLC Siemens redondantes, poste triple écran et serveur IA Gemini.',
-                specs: '• Automate: Siemens S7-1500\\n• Cycle: 20 ms\\n• COP global: 3.8x'
+                title: 'SCADA Control Room & AI Gateway',
+                desc: 'Operator control cabin with panoramic glazing, redundant Siemens S7-1500 PLCs, triple-screen HMI station, and Gemini AI optimization gateway.',
+                specs: '• Automation: Siemens S7-1500\\n• Scan cycle: 20 ms\\n• Overall COP: 3.8x'
             }}
         }};
 
@@ -709,14 +709,14 @@ def get_3d_viewer_html(telemetry: dict) -> str:
                 m.material.depthWrite = !isCutaway;
             }});
             document.getElementById('btn-cutaway').classList.toggle('active', isCutaway);
-            showToast(isCutaway ? "Mode Écorché X-Ray ACTIF" : "Mode Réaliste PBR ACTIF");
+            showToast(isCutaway ? "Cutaway X-Ray Mode ACTIVE" : "Realistic PBR Mode ACTIVE");
         }}
 
         function toggleFlow() {{
             flowActive = !flowActive;
-            document.getElementById('btn-flow').textContent = flowActive ? "Flux: Actifs" : "Flux: Pause";
+            document.getElementById('btn-flow').textContent = flowActive ? "Flow: Active" : "Flow: Paused";
             document.getElementById('btn-flow').classList.toggle('active', !flowActive);
-            showToast(flowActive ? "Animation des flux reprise" : "Animation des flux en pause");
+            showToast(flowActive ? "Streamlines animation resumed" : "Streamlines animation paused");
         }}
 
         function showZoneCard(zoneKey) {{

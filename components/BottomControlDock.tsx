@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { CameraPreset, DisplayMode, PlantTelemetry } from '@/lib/types/plant';
 import { PlantSimulationInputs } from '@/lib/simulation/plantSimulation';
+import { Language, translations } from '@/lib/i18n';
 import {
   Camera,
   Layers,
@@ -30,6 +31,7 @@ interface BottomControlDockProps {
   telemetry: PlantTelemetry;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  lang?: Language;
 }
 
 export function BottomControlDock({
@@ -44,7 +46,9 @@ export function BottomControlDock({
   telemetry,
   isCollapsed: externalIsCollapsed,
   onToggleCollapse,
+  lang = 'en',
 }: BottomControlDockProps) {
+  const t = translations[lang];
   const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
   const isCollapsed = externalIsCollapsed !== undefined ? externalIsCollapsed : internalIsCollapsed;
   const toggleCollapse = onToggleCollapse || (() => setInternalIsCollapsed(!internalIsCollapsed));
@@ -70,17 +74,17 @@ export function BottomControlDock({
       <button
         onClick={toggleCollapse}
         className="mb-1.5 px-3 py-1 bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-700/80 rounded-full text-[11px] font-mono tracking-wider flex items-center gap-1.5 shadow-lg transition-colors cursor-pointer"
-        title="Raccourci clavier : Touche H"
+        title="Key shortcut: Key H"
       >
         {isCollapsed ? (
           <>
             <ChevronUp className="w-3.5 h-3.5 text-sky-400" />
-            <span>Show Engineering Controls</span>
+            <span>{t.zenShow}</span>
           </>
         ) : (
           <>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-            <span>Hide Dock (Zen View)</span>
+            <span>{t.zenHide}</span>
           </>
         )}
       </button>
@@ -93,50 +97,50 @@ export function BottomControlDock({
             <div className="flex items-center gap-1.5 bg-slate-800/80 p-1 rounded-xl">
               <button
                 onClick={() => setActiveTab('camera')}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'camera'
                     ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <Camera className="w-3.5 h-3.5" />
-                <span>Camera Views</span>
+                <span>{t.cameraViews}</span>
               </button>
               <button
                 onClick={() => setActiveTab('modes')}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'modes'
                     ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <Eye className="w-3.5 h-3.5" />
-                <span>Render & Cutaway</span>
+                <span>{t.renderCutaway}</span>
               </button>
               <button
                 onClick={() => setActiveTab('simulation')}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'simulation'
                     ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <Sliders className="w-3.5 h-3.5" />
-                <span>Thermodynamic Sim</span>
+                <span>{t.thermoSim}</span>
               </button>
             </div>
 
             {/* Process Flow Animation Controls */}
             <div className="flex items-center gap-2 text-xs font-mono">
-              <span className="text-[11px] text-slate-400 hidden sm:inline">CIRCUITS:</span>
+              <span className="text-[11px] text-slate-400 hidden sm:inline">{t.circuits}</span>
               <button
                 onClick={() => onSetFlowSpeed(flowSpeed === 0 ? 1 : 0)}
-                className={`p-1.5 rounded-lg border transition-colors ${
+                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
                   flowSpeed > 0
                     ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
                     : 'bg-slate-800 border-slate-700 text-slate-400'
                 }`}
-                title={flowSpeed > 0 ? 'Pause Streamlines' : 'Resume Streamlines'}
+                title={flowSpeed > 0 ? t.speedPause : t.speedResume}
               >
                 {flowSpeed > 0 ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
               </button>
@@ -145,7 +149,7 @@ export function BottomControlDock({
                   <button
                     key={spd}
                     onClick={() => onSetFlowSpeed(spd)}
-                    className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                    className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer ${
                       flowSpeed === spd
                         ? 'bg-sky-500/30 text-sky-300'
                         : 'text-slate-400 hover:text-slate-200'
@@ -165,7 +169,7 @@ export function BottomControlDock({
                 <button
                   key={preset.id}
                   onClick={() => onSelectPreset(preset.id)}
-                  className={`p-2 rounded-xl text-left border transition-all ${
+                  className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
                     currentPreset === preset.id
                       ? 'bg-sky-500/20 border-sky-400/60 text-sky-200 shadow-md shadow-sky-950/40'
                       : 'bg-slate-800/50 hover:bg-slate-800 border-slate-700/60 text-slate-300'
@@ -188,44 +192,44 @@ export function BottomControlDock({
               <div className="flex-1 min-w-[200px] flex gap-2">
                 <button
                   onClick={() => onSetDisplayMode('realistic')}
-                  className={`flex-1 p-2.5 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 transition-all ${
+                  className={`flex-1 p-2.5 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 transition-all cursor-pointer ${
                     displayMode === 'realistic'
                       ? 'bg-sky-500/20 border-sky-400 text-sky-200'
                       : 'bg-slate-800/50 hover:bg-slate-800 border-slate-700 text-slate-400'
                   }`}
                 >
                   <Eye className="w-4 h-4 text-sky-400" />
-                  <span>Realistic PBR Industrial</span>
+                  <span>{t.realisticMode}</span>
                 </button>
 
                 <button
                   onClick={() => onSetDisplayMode('cutaway')}
-                  className={`flex-1 p-2.5 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 transition-all ${
+                  className={`flex-1 p-2.5 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 transition-all cursor-pointer ${
                     displayMode === 'cutaway'
                       ? 'bg-amber-500/20 border-amber-400 text-amber-200'
                       : 'bg-slate-800/50 hover:bg-slate-800 border-slate-700 text-slate-400'
                   }`}
                 >
                   <Layers className="w-4 h-4 text-amber-400" />
-                  <span>X-Ray / Internal Cutaway</span>
+                  <span>{t.cutawayMode}</span>
                 </button>
 
                 <button
                   onClick={() => onSetDisplayMode('thermal')}
-                  className={`flex-1 p-2.5 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 transition-all ${
+                  className={`flex-1 p-2.5 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 transition-all cursor-pointer ${
                     displayMode === 'thermal'
                       ? 'bg-red-500/20 border-red-400 text-red-200'
                       : 'bg-slate-800/50 hover:bg-slate-800 border-slate-700 text-slate-400'
                   }`}
                 >
                   <Thermometer className="w-4 h-4 text-red-400" />
-                  <span>Thermal Heatmap</span>
+                  <span>{t.thermalMode}</span>
                 </button>
               </div>
 
               <div className="text-[11px] text-slate-400 bg-slate-800/80 px-3 py-2 rounded-xl border border-slate-700/60 max-w-sm">
-                <span className="font-semibold text-slate-200 block">Cutaway Inspection:</span>
-                Reveals the internal quartz sand core, immersion heaters, coil exchangers, pyrolysis auger, and dryer trays.
+                <span className="font-semibold text-slate-200 block">{t.cutawayDescTitle}</span>
+                {t.cutawayDescText}
               </div>
             </div>
           )}
@@ -237,7 +241,7 @@ export function BottomControlDock({
                 {/* Solar Irradiance Slider */}
                 <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
                   <div className="flex justify-between items-center text-xs font-mono mb-1">
-                    <span className="text-slate-400">Solar Irradiance:</span>
+                    <span className="text-slate-400">{t.solarIrradiance}:</span>
                     <span className="font-bold text-yellow-300">
                       {simulationInputs.solarIrradianceWm2} W/m²
                     </span>
@@ -261,7 +265,7 @@ export function BottomControlDock({
                 {/* Biomass Feed Rate */}
                 <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
                   <div className="flex justify-between items-center text-xs font-mono mb-1">
-                    <span className="text-slate-400">Biomass Infeed:</span>
+                    <span className="text-slate-400">{t.biomassInfeed}:</span>
                     <span className="font-bold text-emerald-300">
                       {simulationInputs.biomassInfeedKgH} kg/h
                     </span>
@@ -285,7 +289,7 @@ export function BottomControlDock({
                 {/* Sand Battery SOC / Temp Slider */}
                 <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
                   <div className="flex justify-between items-center text-xs font-mono mb-1">
-                    <span className="text-slate-400">Sand Battery SOC:</span>
+                    <span className="text-slate-400">{t.sandBatterySoc}:</span>
                     <span className="font-bold text-amber-300">
                       {simulationInputs.sandBatterySocTargetPercent}% ({telemetry.sandCoreTempC.toFixed(0)}°C)
                     </span>
@@ -309,7 +313,7 @@ export function BottomControlDock({
                 {/* Pyrolysis Retort Temp */}
                 <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
                   <div className="flex justify-between items-center text-xs font-mono mb-1">
-                    <span className="text-slate-400">Pyrolysis Temp:</span>
+                    <span className="text-slate-400">{t.pyrolysisTemp}:</span>
                     <span className="font-bold text-red-300">
                       {simulationInputs.pyrolysisTempC}°C
                     </span>
@@ -347,11 +351,11 @@ export function BottomControlDock({
                   )}
                   <span>
                     <strong className="font-semibold uppercase tracking-wider">
-                      {telemetry.dryerInterlockEngaged ? 'INTERLOCK ACTIVE:' : 'NORMAL OPERATION:'}
+                      {telemetry.dryerInterlockEngaged ? t.dryerInterlockActive : t.dryerInterlockNormal}
                     </strong>{' '}
                     {telemetry.dryerInterlockEngaged
-                      ? 'Biomass Dryer automatically paused. Sand Battery stored thermal energy is below minimum threshold (<180°C / 35% SOC).'
-                      : 'Sand Battery threshold satisfied (>180°C). Supplying continuous clean convection heat to Zone B Dryer.'}
+                      ? t.dryerInterlockActiveDesc
+                      : t.dryerInterlockNormalDesc}
                   </span>
                 </div>
                 <span className="font-mono text-[11px] shrink-0 opacity-80">

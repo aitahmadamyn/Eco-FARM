@@ -1,6 +1,6 @@
 """
-ECOFARM CIRCULAR — Jumeau Numérique & Visualisation Industrielle 3D
-Point d'entrée principal pour le déploiement sur Streamlit Cloud (Main file path: app.py).
+ECOFARM CIRCULAR — 3D Industrial Engineering Digital Twin
+Main entry point for Streamlit Cloud deployment (Main file path: app.py).
 """
 
 import os
@@ -10,7 +10,7 @@ import urllib.error
 import streamlit as st
 import streamlit.components.v1 as components
 
-# Import du moteur de rendu 3D WebGL natif (lib/streamlit_3d.py)
+# Import native WebGL Three.js 3D viewer (lib/streamlit_3d.py)
 try:
     from lib.streamlit_3d import get_3d_viewer_html
 except ImportError:
@@ -19,15 +19,15 @@ except ImportError:
     sys.path.append(str(Path(__file__).parent))
     from lib.streamlit_3d import get_3d_viewer_html
 
-# Configuration de la page Streamlit
+# Streamlit Page Configuration
 st.set_page_config(
-    page_title="ECOFARM CIRCULAR — Jumeau Numérique",
+    page_title="ECOFARM CIRCULAR — 3D Digital Twin",
     page_icon="🌱",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Récupération sécurisée des clés (st.secrets avec fallback os.environ)
+# Secure secret retrieval (st.secrets with os.environ fallback)
 def get_secret(key_name: str, default: str = "") -> str:
     try:
         if hasattr(st, "secrets") and key_name in st.secrets:
@@ -40,13 +40,143 @@ GEMINI_API_KEY = get_secret("GEMINI_API_KEY")
 GITHUB_TOKEN = get_secret("GITHUB_TOKEN")
 APP_URL = get_secret("APP_URL", "")
 
-# Données statiques d'ingénierie pour les 6 zones fonctionnelles
-ZONES_DATA = {
+# Language selector in sidebar
+selected_lang = st.sidebar.selectbox(
+    "🌐 Interface Language",
+    ["English 🇬🇧", "Français 🇫🇷"],
+    index=0
+)
+is_english = "English" in selected_lang
+
+# Engineering specifications for the 6 functional zones (English & French)
+ZONES_DATA_EN = {
+    "zoneA": {
+        "tag": "ZONE A",
+        "name": "Biomass Reception & Preparation",
+        "subtitle": "Raw residue bunker, dual-shaft shredder & inclined belt conveyor",
+        "description": "Inground discharge hopper receiving heterogeneous agricultural residues (olive pomace, orchard prunings, corn stover, nut shells). Features a 15-ton hydraulic tipping ramp, high-torque shredder with neodymium magnetic separator, and an 18° inclined troughed belt conveyor.",
+        "equipment": [
+            "Inground Reception Bunker with Heavy Safety Grating",
+            "Hydraulic Tipping Ramp (Max 15t payload)",
+            "High-Torque Dual-Shaft Shredder & Fine Hammer Mill (7.5 kW)",
+            "Over-Belt Permanent Neodymium Magnetic Separator",
+            "Reinforced 3-Ply Rubber Belt Conveyor (18° incline, 30 m/min)",
+            "Prepared Biomass Metering Surge Hopper with Load Cells"
+        ],
+        "params": [
+            {"label": "Nominal Feed Rate", "val": "120 kg/h"},
+            {"label": "Infeed Moisture Content", "val": "45 %"},
+            {"label": "Target Particle Size", "val": "8 - 15 mm"},
+            {"label": "Shredder Motor Power", "val": "7.5 kW"}
+        ]
+    },
+    "zoneB": {
+        "tag": "ZONE B",
+        "name": "Automated Continuous Tray Dryer",
+        "subtitle": "Low-temperature clean air convection drying with sand battery recovery",
+        "description": "Multi-pass insulated stainless steel continuous drying enclosure (100mm mineral wool). Triple perforated agitated conveyor trays powered exclusively by clean air heat exchangers linked to the Sand Thermal Battery. Operation is automatically governed by the sand thermal charge level.",
+        "equipment": [
+            "Insulated Modular Stainless Steel Drying Enclosure (100mm mineral wool)",
+            "Triple Perforated Stainless Steel Agitated Conveyor Trays",
+            "Finned Tube Copper-Aluminum Liquid-to-Air Heat Exchanger",
+            "Industrial Centrifugal Hot Air Circulation Blower (4,500 m³/h)",
+            "Moisture Exhaust Demister Column & Condenser",
+            "In-Line Capacitive Moisture Sensors & PT100 RTDs"
+        ],
+        "params": [
+            {"label": "Drying Chamber Temp", "val": "85 °C"},
+            {"label": "Target Output Moisture", "val": "10.5 %"},
+            {"label": "Air Circulation Flow", "val": "4,200 m³/h"},
+            {"label": "Required Thermal Duty", "val": "48.5 kW_th"}
+        ]
+    },
+    "zoneC": {
+        "tag": "ZONE C",
+        "name": "Industrial Pyrolysis Unit",
+        "subtitle": "Oxygen-free thermochemical retort at 520°C & syngas thermal oxidizer",
+        "description": "Continuous double-walled Inconel retort with internal ribbon screw. Combustible syngas is dedusted via high-efficiency cyclone, then combusted in a flameless thermal oxidizer whose clean flue heat is captured to recharge the Sand Battery (zero raw syngas venting).",
+        "equipment": [
+            "Horizontal Double-Walled Inconel Retort Tube with Ribbon Screw",
+            "Ceramic Band Electric Heaters (Startup & Precision Control)",
+            "High-Efficiency Multi-Cone Cyclone Particulate Separator",
+            "Flameless Syngas Thermal Oxidizer Combustion Chamber",
+            "Flue Gas Shell-and-Tube Heat Exchanger to Sand Battery",
+            "Water-Cooled Biochar Discharge Screw with Nitrogen Purge"
+        ],
+        "params": [
+            {"label": "Pyrolysis Bed Temp", "val": "520 °C"},
+            {"label": "Retort Gauge Pressure", "val": "+15 mbar"},
+            {"label": "Recovered Syngas Heat", "val": "62.0 kW_th"},
+            {"label": "High-Purity Biochar Yield", "val": "38.5 kg/h"}
+        ]
+    },
+    "zoneD": {
+        "tag": "ZONE D",
+        "name": "Hybrid Sand Thermal Battery",
+        "subtitle": "Solid quartz silica high-temperature energy storage (1.25 MWh_th)",
+        "description": "Vertical cylindrical insulated steel vessel containing 45 metric tons of refractory quartz sand capable of reaching 500°C. Charged by three distinct vectors: solar thermal collectors, pyrolysis syngas combustion recovery, and PV surplus electrical immersion heaters.",
+        "equipment": [
+            "Heavily Insulated Steel Storage Vessel (Ø 3.8m × H 4.8m, 45t quartz sand)",
+            "Incoloy 800 Submerged Electric Immersion Heaters (75 kW total for PV surplus)",
+            "Spiral 316L Stainless Steel Heat Exchanger Tube Bundles",
+            "12-Point Vertical Thermal Stratification Thermocouple Tree",
+            "Dual Redundant Thermal Fluid Circulation Pumps with Expansion Tank",
+            "High-Temperature Pressure Relief and Nitrogen Inerting Valves"
+        ],
+        "params": [
+            {"label": "Sand Core Temperature", "val": "445 °C"},
+            {"label": "State of Charge (SOC)", "val": "78 %"},
+            {"label": "Stored Thermal Energy", "val": "1.25 MWh_th"},
+            {"label": "Discharge Thermal Duty", "val": "48.5 kW_th"}
+        ]
+    },
+    "zoneE": {
+        "tag": "ZONE E",
+        "name": "Renewable Energy Integration",
+        "subtitle": "Photovoltaic canopy, solar thermal field & dynamic energy dispatch",
+        "description": "Structural canopy supporting 16 bifacial monocrystalline PV panels (50 kWp), 40 m² evacuated tube solar thermal collectors, an IP66 electrical switchboard, and a 60 kWh LFP battery system. PV electricity surplus is dynamically diverted to the sand battery immersion heaters.",
+        "equipment": [
+            "Bifacial Monocrystalline Solar PV Array (50 kWp)",
+            "Evacuated Tube Solar Thermal Collector Field (40 m² aperture)",
+            "Industrial 3-Phase Hybrid Inverter 60 kVA (IP66)",
+            "Auxiliary 60 kWh Lithium Iron Phosphate (LFP) Battery Rack",
+            "Thyristor Power Controllers for Rapid Immersion Heater Throttling",
+            "Precision Pyranometer and Weather Station Mast"
+        ],
+        "params": [
+            {"label": "Solar Irradiance", "val": "820 W/m²"},
+            {"label": "Solar PV Power", "val": "41.2 kW_e"},
+            {"label": "Solar Thermal Output", "val": "28.4 kW_th"},
+            {"label": "PV Surplus to Sand", "val": "26.8 kW_e"}
+        ]
+    },
+    "zoneF": {
+        "tag": "ZONE F",
+        "name": "SCADA Automation & AI Control Room",
+        "subtitle": "Redundant PLCs, SCADA supervision HMI and Gemini AI copilot",
+        "description": "Climate-controlled control cabin housing redundant industrial PLCs, triple-screen operator workstation with real-time SCADA synoptic, and AI edge gateway running thermodynamic optimization models.",
+        "equipment": [
+            "Rittal Industrial Electrical Cabinets IP55 with Active Filtration",
+            "Redundant Safety PLCs (Siemens S7-1500 / Modicon M580)",
+            "Triple-Monitor Operator Workstation with Real-Time SCADA HMI",
+            "Edge Industrial AI Compute Gateway for Enthalpy Dispatch",
+            "Industrial 3-Color Signal Stack Light Tower"
+        ],
+        "params": [
+            {"label": "Active IoT Sensor Nodes", "val": "48 nodes"},
+            {"label": "PLC Scan Cycle", "val": "20 ms"},
+            {"label": "AI Optimization Score", "val": "94.6 %"},
+            {"label": "Net Thermal COP", "val": "3.8x"}
+        ]
+    }
+}
+
+ZONES_DATA_FR = {
     "zoneA": {
         "tag": "ZONE A",
         "name": "Réception & Préparation Biomasse",
         "subtitle": "Trémie de réception, broyeur fin à marteaux et convoyeur incliné",
-        "description": "Fosse de déchargement inground pour résidus agricoles hétérogènes (grignons d'olive, paille, bois d'élagage). Inclut une rampe basculante hydraulique (15 t), un broyeur bi-rotor avec séparateur magnétique néodyme et un convoyeur à bande auget inclinée à 18°.",
+        "description": "Fosse de déchargement inground pour résidus agricoles hétérogènes. Inclut une rampe basculante hydraulique (15 t), un broyeur bi-rotor avec séparateur magnétique néodyme et un convoyeur à bande auget inclinée à 18°.",
         "equipment": [
             "Fosse inground avec caillebotis de sécurité",
             "Rampe basculante hydraulique 15 tonnes",
@@ -66,7 +196,7 @@ ZONES_DATA = {
         "tag": "ZONE B",
         "name": "Séchoir Continu Automatisé",
         "subtitle": "Chambre de séchage à convection douce et récupération thermique",
-        "description": "Tunnel continu calorifugé en acier inoxydable (100 mm laine minérale). Trois étages de plateaux perforés agités chauffés par l'air chaud généré via l'échangeur alimenté par la Batterie à Sable. Le fonctionnement est automatiquement asservi au niveau de charge thermique du sable.",
+        "description": "Tunnel continu calorifugé en acier inoxydable. Trois étages de plateaux perforés agités chauffés par l'air chaud généré via l'échangeur alimenté par la Batterie à Sable.",
         "equipment": [
             "Enceinte inox isolée 100 mm laine minérale",
             "3 étages de plateaux perforés oscillants",
@@ -86,7 +216,7 @@ ZONES_DATA = {
         "tag": "ZONE C",
         "name": "Unité de Pyrolyse & Biochar",
         "subtitle": "Réacteur thermochimique étanche à 520°C et combustion des gaz",
-        "description": "Retort cylindrique horizontal en Inconel avec vis sans fin interne. Les gaz de pyrolyse (syngas) sont dépoussiérés par un cyclone puis brûlés dans un oxydateur thermique sans flamme. La chaleur des fumées est intégralement récupérée vers la batterie à sable (zéro émission de gaz non traité).",
+        "description": "Retort cylindrique horizontal en Inconel avec vis sans fin interne. Les gaz de pyrolyse (syngas) sont dépoussiérés par un cyclone puis brûlés dans un oxydateur thermique sans flamme.",
         "equipment": [
             "Réacteur horizontal en Inconel avec vis ruban",
             "Colliers chauffants électriques céramiques pour préchauffage",
@@ -106,7 +236,7 @@ ZONES_DATA = {
         "tag": "ZONE D",
         "name": "Batterie Thermique Hybride à Sable",
         "subtitle": "Stockage thermique solide haute température (1.25 MWh_th)",
-        "description": "Cuve verticale cylindrique isolée contenant 45 tonnes de sable de quartz réfractaire pouvant atteindre 500°C. Chargée par 3 sources : collecteurs solaires thermiques, récupération syngas et surplus PV par thermoplongeurs. Décharge contrôlée vers le séchoir.",
+        "description": "Cuve verticale cylindrique isolée contenant 45 tonnes de sable de quartz réfractaire pouvant atteindre 500°C. Chargée par 3 sources : collecteurs solaires, syngas et surplus PV.",
         "equipment": [
             "Cuve acier calorifugée (Ø 3.8m × H 4.8m, 45t sable quartz)",
             "Thermoplongeurs électriques Incoloy 800 (75 kW total pour surplus PV)",
@@ -126,7 +256,7 @@ ZONES_DATA = {
         "tag": "ZONE E",
         "name": "Intégration Énergies Renouvelables",
         "subtitle": "Panneaux photovoltaïques, solaire thermique et délestage dynamique",
-        "description": "Canopée solaire intégrant 16 panneaux photovoltaïques bifaciaux monocristallins (50 kWp), un champ de capteurs solaires à tubes sous vide (40 m²), une armoire électrique IP66 et un stockage batterie LFP de 60 kWh. Le surplus PV est directement dérouté vers les thermoplongeurs du sable.",
+        "description": "Canopée solaire intégrant 16 panneaux photovoltaïques bifaciaux monocristallins (50 kWp), 40 m² de capteurs solaires thermiques, armoire électrique IP66 et batterie LFP 60 kWh.",
         "equipment": [
             "Champ photovoltaïque monocristallin bifacial (50 kWp)",
             "Collecteurs solaires à tubes sous vide (40 m²)",
@@ -146,7 +276,7 @@ ZONES_DATA = {
         "tag": "ZONE F",
         "name": "Automatisation & Contrôle IA",
         "subtitle": "Automates programmables (PLC), synoptique SCADA et agent IA",
-        "description": "Cabine de contrôle climatisée abritant les armoires électriques PLC redondantes, le poste opérateur triple écran HMI avec synoptique temps réel, et la passerelle d'optimisation IA alimentée par Google Gemini.",
+        "description": "Cabine de contrôle climatisée abritant les armoires électriques PLC redondantes, le poste opérateur triple écran HMI avec synoptique temps réel et passerelle IA.",
         "equipment": [
             "Armoires électriques Rittal IP55 avec filtrage",
             "Automates programmables redondants (PLC Siemens S7-1500)",
@@ -163,9 +293,10 @@ ZONES_DATA = {
     }
 }
 
-# Modèle thermodynamique de calcul
+ZONES_DATA = ZONES_DATA_EN if is_english else ZONES_DATA_FR
+
+# Thermodynamic calculation engine
 def compute_telemetry(solar_w, feed_kgh, moisture_pct, sand_soc_pct, pyro_temp_c):
-    # Production renouvelable
     pv_area = 240
     pv_eff = 0.20
     pv_kw = max(0.0, (solar_w * pv_area * pv_eff) / 1000.0)
@@ -177,7 +308,6 @@ def compute_telemetry(solar_w, feed_kgh, moisture_pct, sand_soc_pct, pyro_temp_c
     base_elec_kw = 9.5 + (feed_kgh / 200.0) * 4.5
     pv_surplus_kw = max(0.0, pv_kw - base_elec_kw)
     
-    # Pyrolyse & Biochar
     dried_feed = feed_kgh * ((100.0 - moisture_pct) / (100.0 - 11.0))
     biochar_ratio = max(0.24, 0.42 - (pyro_temp_c - 400.0) * 0.00065)
     biochar_kgh = max(5.0, dried_feed * biochar_ratio)
@@ -186,15 +316,12 @@ def compute_telemetry(solar_w, feed_kgh, moisture_pct, sand_soc_pct, pyro_temp_c
     syngas_kgh = dried_feed * syngas_ratio
     syngas_heat_kw = max(10.0, (syngas_kgh * 14.5 * 1000.0 * 0.88) / 3600.0)
     
-    # Batterie à sable
     sand_soc = min(100.0, max(5.0, float(sand_soc_pct)))
     sand_core_c = 100.0 + (sand_soc / 100.0) * (520.0 - 100.0)
     stored_mwh = (sand_soc / 100.0) * 1.5
     
-    # Interverrouillage de sécurité automatique (Interlock)
     dryer_interlocked = sand_soc < 35.0 or sand_core_c < 180.0
     
-    # Séchoir
     water_in = (feed_kgh * moisture_pct) / 100.0
     dry_solid = feed_kgh * (1.0 - moisture_pct / 100.0)
     target_moisture = 11.0
@@ -220,99 +347,136 @@ def compute_telemetry(solar_w, feed_kgh, moisture_pct, sand_soc_pct, pyro_temp_c
         "cop": cop
     }
 
-# ----------------- INTERFACE STREAMLIT -----------------
+# ----------------- UI RENDERING -----------------
 
-# Titre & En-tête
-st.markdown("""
+badge_text = "3D INDUSTRIAL PILOT" if is_english else "PILOTE INDUSTRIEL 3D"
+subtitle_text = (
+    "Agricultural biomass valorization • Hybrid sand thermal energy storage (1.2 MWh) • Automated continuous drying"
+    if is_english
+    else "Valorisation thermochimique de la biomasse • Batterie thermique à sable (1.2 MWh) • Séchage continu automatisé"
+)
+
+st.markdown(f"""
 <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 22px 28px; border-radius: 16px; border: 1px solid #334155; margin-bottom: 24px;">
     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
         <div>
             <div style="display: flex; align-items: center; gap: 10px;">
                 <h1 style="color: #f8fafc; margin: 0; font-size: 26px; font-weight: 700; letter-spacing: 1px;">ECOFARM CIRCULAR</h1>
-                <span style="background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4); padding: 3px 10px; border-radius: 9999px; font-size: 11px; font-family: monospace; font-weight: bold;">PILOTE INDUSTRIEL 3D</span>
+                <span style="background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4); padding: 3px 10px; border-radius: 9999px; font-size: 11px; font-family: monospace; font-weight: bold;">{badge_text}</span>
             </div>
             <p style="color: #94a3b8; margin: 6px 0 0 0; font-size: 13px;">
-                Valorisation thermochimique de la biomasse • Batterie thermique à sable (1.2 MWh) • Séchage continu automatisé
+                {subtitle_text}
             </p>
         </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Barre latérale : Paramètres de simulation
-st.sidebar.markdown("### ⚙️ Simulation Thermodynamique")
-solar_input = st.sidebar.slider("☀️ Irradiation Solaire (W/m²)", 0, 1000, 820, 25)
-biomass_input = st.sidebar.slider("🪵 Débit Biomasse (kg/h)", 20, 200, 120, 10)
-moisture_input = st.sidebar.slider("💧 Humidité Entrante (%)", 20, 65, 45, 5)
-sand_soc_input = st.sidebar.slider("🔋 Charge Batterie Sable SOC (%)", 10, 100, 78, 5)
-pyro_temp_input = st.sidebar.slider("🔥 Température Pyrolyse (°C)", 400, 650, 520, 10)
+# Sidebar: Simulation inputs
+sidebar_header = "### ⚙️ Thermodynamic Simulation" if is_english else "### ⚙️ Simulation Thermodynamique"
+st.sidebar.markdown(sidebar_header)
+
+solar_label = "☀️ Solar Irradiance (W/m²)" if is_english else "☀️ Irradiation Solaire (W/m²)"
+feed_label = "🪵 Biomass Infeed (kg/h)" if is_english else "🪵 Débit Biomasse (kg/h)"
+moisture_label = "💧 Infeed Moisture Content (%)" if is_english else "💧 Humidité Entrante (%)"
+sand_label = "🔋 Sand Battery SOC (%)" if is_english else "🔋 Charge Batterie Sable SOC (%)"
+pyro_label = "🔥 Pyrolysis Retort Temp (°C)" if is_english else "🔥 Température Pyrolyse (°C)"
+
+solar_input = st.sidebar.slider(solar_label, 0, 1000, 820, 25)
+biomass_input = st.sidebar.slider(feed_label, 20, 200, 120, 10)
+moisture_input = st.sidebar.slider(moisture_label, 20, 65, 45, 5)
+sand_soc_input = st.sidebar.slider(sand_label, 10, 100, 78, 5)
+pyro_temp_input = st.sidebar.slider(pyro_label, 400, 650, 520, 10)
 
 telemetry = compute_telemetry(solar_input, biomass_input, moisture_input, sand_soc_input, pyro_temp_input)
 
-# Bannière d'interverrouillage de sécurité (Interlock)
+# Safety interlock banner
 if telemetry["dryer_interlocked"]:
-    st.error(f"""
-    🚨 **INTERVERROUILLAGE SÉCHOIR ENGAGÉ (INHIBITED) :**  
-    Le séchoir est automatiquement suspendu. L'énergie thermique stockée dans la Batterie à Sable ({telemetry['sand_core_c']:.0f}°C / {telemetry['sand_soc']:.0f}% SOC) 
-    est inférieure au seuil minimal de sécurité (180°C / 35% SOC).
-    """)
+    if is_english:
+        st.error(f"""
+        🚨 **DRYER SAFETY INTERLOCK ENGAGED (INHIBITED):**  
+        The biomass dryer is automatically suspended. Thermal energy in the Sand Battery ({telemetry['sand_core_c']:.0f}°C / {telemetry['sand_soc']:.0f}% SOC) 
+        is below the required safety threshold (180°C / 35% SOC).
+        """)
+    else:
+        st.error(f"""
+        🚨 **INTERVERROUILLAGE SÉCHOIR ENGAGÉ (INHIBITED) :**  
+        Le séchoir est automatiquement suspendu. L'énergie thermique stockée dans la Batterie à Sable ({telemetry['sand_core_c']:.0f}°C / {telemetry['sand_soc']:.0f}% SOC) 
+        est inférieure au seuil minimal de sécurité (180°C / 35% SOC).
+        """)
 else:
-    st.success(f"""
-    ✅ **SÉCHOIR EN FONCTIONNEMENT NORMAL :**  
-    Batterie à Sable opérationnelle ({telemetry['sand_core_c']:.0f}°C). Débit thermique délivré à l'échangeur : **{telemetry['dryer_heat_kw']:.1f} kW_th**.
-    """)
+    if is_english:
+        st.success(f"""
+        ✅ **DRYER IN NORMAL OPERATION:**  
+        Sand Battery operational ({telemetry['sand_core_c']:.0f}°C). Delivering clean thermal power to drying heat exchanger: **{telemetry['dryer_heat_kw']:.1f} kW_th**.
+        """)
+    else:
+        st.success(f"""
+        ✅ **SÉCHOIR EN FONCTIONNEMENT NORMAL :**  
+        Batterie à Sable opérationnelle ({telemetry['sand_core_c']:.0f}°C). Débit thermique délivré à l'échangeur : **{telemetry['dryer_heat_kw']:.1f} kW_th**.
+        """)
 
-# Métriques clés (KPIs)
+# KPIs
 col1, col2, col3, col4, col5 = st.columns(5)
 with col1:
-    st.metric("🔥 Cœur de Sable", f"{telemetry['sand_core_c']:.0f} °C", f"{telemetry['stored_mwh']:.2f} MWh")
+    label = "🔥 Sand Core" if is_english else "🔥 Cœur de Sable"
+    st.metric(label, f"{telemetry['sand_core_c']:.0f} °C", f"{telemetry['stored_mwh']:.2f} MWh")
 with col2:
-    st.metric("☀️ Solaire (PV + Th)", f"{telemetry['pv_kw'] + telemetry['st_kw']:.1f} kW", f"Surplus: {telemetry['pv_surplus_kw']:.1f} kW")
+    label = "☀️ Solar (PV + Th)" if is_english else "☀️ Solaire (PV + Th)"
+    st.metric(label, f"{telemetry['pv_kw'] + telemetry['st_kw']:.1f} kW", f"Surplus: {telemetry['pv_surplus_kw']:.1f} kW")
 with col3:
-    st.metric("♻️ Récup. Syngas", f"{telemetry['syngas_heat_kw']:.1f} kW_th", "Oxydateur étanche")
+    label = "♻️ Syngas Recovery" if is_english else "♻️ Récup. Syngas"
+    sub = "Thermal Oxidizer" if is_english else "Oxydateur étanche"
+    st.metric(label, f"{telemetry['syngas_heat_kw']:.1f} kW_th", sub)
 with col4:
-    st.metric("🌱 Biochar C-Fixe", f"{telemetry['biochar_kgh']:.1f} kg/h", f"{telemetry['co2_seq_day']:.0f} kg CO₂/j")
+    label = "🌱 Fixed-C Biochar" if is_english else "🌱 Biochar C-Fixe"
+    unit = "kg CO₂/day" if is_english else "kg CO₂/j"
+    st.metric(label, f"{telemetry['biochar_kgh']:.1f} kg/h", f"{telemetry['co2_seq_day']:.0f} {unit}")
 with col5:
-    st.metric("⚡ COP Thermique", f"{telemetry['cop']:.1f}x", "Efficacité globale")
+    label = "⚡ Thermal COP" if is_english else "⚡ COP Thermique"
+    sub = "Overall Plant COP" if is_english else "Efficacité globale"
+    st.metric(label, f"{telemetry['cop']:.1f}x", sub)
 
-# Onglets principaux
-tab_viz, tab_zones, tab_ai, tab_github = st.tabs([
+# Tabs
+tab_titles = [
+    "🖥️ Interactive 3D Digital Twin",
+    "📋 6 Functional Zones P&ID",
+    "🤖 AI Energy Optimization (Gemini)",
+    "🐙 GitHub Synchronization"
+] if is_english else [
     "🖥️ Visualisation 3D Interactive",
     "📋 Spécifications des 6 Zones",
     "🤖 Optimisation Énergétique IA",
     "🐙 Synchronisation GitHub"
-])
+]
 
-# ONGLET 1 : Visualisation 3D
+tab_viz, tab_zones, tab_ai, tab_github = st.tabs(tab_titles)
+
+# TAB 1: 3D Visualization
 with tab_viz:
-    st.markdown("#### Jumeau Numérique 3D — Vue Interactive en Temps Réel")
-    st.caption("Inspectez l'ensemble de l'installation industrielle : 6 zones, batterie à sable, flux thermiques et de matière animés.")
+    header = "#### 3D Digital Twin — Interactive Real-Time Engineering View" if is_english else "#### Jumeau Numérique 3D — Vue Interactive en Temps Réel"
+    caption = "Inspect the complete industrial facility: 6 functional zones, sand thermal battery, and animated process streamlines." if is_english else "Inspectez l'ensemble de l'installation industrielle : 6 zones, batterie à sable, flux thermiques et de matière animés."
+    st.markdown(header)
+    st.caption(caption)
     
-    # Rendu 3D WebGL Three.js 100% natif et autonome (aucun serveur externe, élimine l'erreur 403 Google)
-    if APP_URL and APP_URL.startswith("http"):
-        viewer_mode = st.radio(
-            "Mode d'affichage 3D :",
-            ["🌟 Moteur 3D WebGL Intégré (Recommandé - Direct & Sécurisé)", "🌐 Serveur Web Externe (Iframe)"],
-            horizontal=True,
-            label_visibility="collapsed"
-        )
-        if "Intégré" in viewer_mode:
-            html_content = get_3d_viewer_html(telemetry)
-            components.html(html_content, height=680, scrolling=False)
-        else:
-            components.iframe(APP_URL, height=680, scrolling=False)
-    else:
-        # Affichage natif direct
-        html_content = get_3d_viewer_html(telemetry)
-        components.html(html_content, height=680, scrolling=False)
+    # Autonomous native WebGL Three.js viewer (eliminates 403 Google error)
+    html_content = get_3d_viewer_html(telemetry, lang="en" if is_english else "fr")
+    components.html(html_content, height=680, scrolling=False)
     
-    st.info("💡 **Contrôles 3D :** Clic gauche pour orbiter • Molette pour zoomer • Clic droit pour déplacer. Utilisez les boutons sous la scène pour changer d'angle (Isométrique, Pyrolyse, Séchoir, Batterie Sable) ou activer le mode Écorché (X-Ray).")
+    controls_hint = (
+        "💡 **3D Controls:** Left-click to orbit • Mouse wheel / pinch to zoom • Right-click to pan. Use dock buttons below the viewport to change angles (Isometric, Pyrolysis, Dryer, Sand Battery) or toggle Cutaway (X-Ray) mode."
+        if is_english
+        else "💡 **Contrôles 3D :** Clic gauche pour orbiter • Molette pour zoomer • Clic droit pour déplacer. Utilisez les boutons sous la scène pour changer d'angle (Isométrique, Pyrolyse, Séchoir, Batterie Sable) ou activer le mode Écorché (X-Ray)."
+    )
+    st.info(controls_hint)
 
-# ONGLET 2 : Zones P&ID
+# TAB 2: Zones P&ID
 with tab_zones:
-    st.markdown("#### Fiches Techniques & Spécifications Industrielles des 6 Zones")
+    header = "#### Engineering Specifications & Datasheets for the 6 Zones" if is_english else "#### Fiches Techniques & Spécifications Industrielles des 6 Zones"
+    select_prompt = "Select a zone to inspect:" if is_english else "Sélectionnez une zone à inspecter :"
+    st.markdown(header)
     selected_zone = st.selectbox(
-        "Sélectionnez une zone à inspecter :",
+        select_prompt,
         options=list(ZONES_DATA.keys()),
         format_func=lambda z: f"{ZONES_DATA[z]['tag']} — {ZONES_DATA[z]['name']}"
     )
@@ -324,50 +488,57 @@ with tab_zones:
     
     col_eq, col_params = st.columns(2)
     with col_eq:
-        st.markdown("**Équipements Principaux :**")
+        st.markdown("**Core Engineered Equipment:**" if is_english else "**Équipements Principaux :**")
         for eq in zone_info["equipment"]:
             st.markdown(f"- {eq}")
     with col_params:
-        st.markdown("**Paramètres Opérationnels :**")
+        st.markdown("**Operational Parameters:**" if is_english else "**Paramètres Opérationnels :**")
         for p in zone_info["params"]:
             st.markdown(f"**{p['label']} :** `{p['val']}`")
 
-# ONGLET 3 : IA Gemini
+# TAB 3: AI Gemini
 with tab_ai:
-    st.markdown("#### Assistant IA d'Ingénierie & d'Optimisation des Enthalpies (Gemini)")
-    st.write("Analyse en temps réel de la balance thermodynamique et recommandations de pilotage pour l'automate (PLC).")
+    header = "#### AI Energy Management & Thermodynamic Copilot (Gemini)" if is_english else "#### Assistant IA d'Ingénierie & d'Optimisation des Enthalpies (Gemini)"
+    desc = "Real-time enthalpy balance analysis and optimal PLC dispatch directives." if is_english else "Analyse en temps réel de la balance thermodynamique et recommandations de pilotage pour l'automate (PLC)."
+    st.markdown(header)
+    st.write(desc)
     
     if not GEMINI_API_KEY:
-        st.warning("⚠️ Clé `GEMINI_API_KEY` non configurée dans `st.secrets` ou variables d'environnement. Un rapport d'ingénierie expert autonome sera généré.")
+        warn = "⚠️ `GEMINI_API_KEY` not configured in `st.secrets` or environment variables. An autonomous expert engineering diagnostic report will be generated." if is_english else "⚠️ Clé `GEMINI_API_KEY` non configurée dans `st.secrets` ou variables d'environnement. Un rapport d'ingénierie expert autonome sera généré."
+        st.warning(warn)
     
-    user_query = st.text_input("Requête d'optimisation (optionnel) :", placeholder="Ex: Comment optimiser le séchage tout en maximisant le rendement en biochar ?")
+    prompt_label = "Custom optimization query (optional):" if is_english else "Requête d'optimisation (optionnel) :"
+    placeholder = "e.g. How to maximize biochar quality while maintaining 85°C drying?" if is_english else "Ex: Comment optimiser le séchage tout en maximisant le rendement en biochar ?"
+    user_query = st.text_input(prompt_label, placeholder=placeholder)
     
-    if st.button("🚀 Lancer l'Analyse Thermodynamique IA", use_container_width=True):
-        with st.spinner("Calcul du modèle thermodynamique et génération des consignes de délestage..."):
+    btn_text = "🚀 Run AI Thermodynamic Analysis" if is_english else "🚀 Lancer l'Analyse Thermodynamique IA"
+    if st.button(btn_text, use_container_width=True):
+        spinner_msg = "Computing multi-vector enthalpy model and PLC dispatch directives..." if is_english else "Calcul du modèle thermodynamique et génération des consignes de délestage..."
+        with st.spinner(spinner_msg):
             dryer_state_label = (
-                "INTERVERROUILLÉ (Arrêté)"
+                ("INTERLOCKED (Paused)" if is_english else "INTERVERROUILLÉ (Arrêté)")
                 if telemetry['dryer_interlocked']
-                else f"EN SERVICE (Demande : {telemetry['dryer_heat_kw']:.1f} kW)"
+                else (f"ARMED & RUNNING (Duty: {telemetry['dryer_heat_kw']:.1f} kW)" if is_english else f"EN SERVICE (Demande : {telemetry['dryer_heat_kw']:.1f} kW)")
             )
 
             telemetry_summary = f"""
-            Télémétrie Pilote :
-            - Irradiation Solaire : {solar_input} W/m² (PV : {telemetry['pv_kw']:.1f} kW, Surplus : {telemetry['pv_surplus_kw']:.1f} kW, Solaire Th : {telemetry['st_kw']:.1f} kW)
-            - Pyrolyse : {pyro_temp_input}°C (Récupération Syngas : {telemetry['syngas_heat_kw']:.1f} kW)
-            - Batterie à Sable : {telemetry['sand_core_c']:.0f}°C (Charge : {telemetry['sand_soc']:.0f}%, Énergie : {telemetry['stored_mwh']:.2f} MWh)
-            - Séchoir Biomasse : {dryer_state_label}
-            - Biochar produit : {telemetry['biochar_kgh']:.1f} kg/h (Séquestration : {telemetry['co2_seq_day']:.0f} kg CO2/j)
+            Plant Telemetry:
+            - Solar Irradiance: {solar_input} W/m² (PV: {telemetry['pv_kw']:.1f} kW, Surplus: {telemetry['pv_surplus_kw']:.1f} kW, Solar Th: {telemetry['st_kw']:.1f} kW)
+            - Pyrolysis: {pyro_temp_input}°C (Syngas Flue Recovery: {telemetry['syngas_heat_kw']:.1f} kW)
+            - Sand Battery: {telemetry['sand_core_c']:.0f}°C (Charge: {telemetry['sand_soc']:.0f}%, Energy: {telemetry['stored_mwh']:.2f} MWh)
+            - Biomass Dryer: {dryer_state_label}
+            - Biochar Output: {telemetry['biochar_kgh']:.1f} kg/h (CO2 Sink: {telemetry['co2_seq_day']:.0f} kg CO2/day)
             """
 
-            # Appel API Gemini
             analysis_text = None
             if GEMINI_API_KEY:
                 try:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+                    system_lang = "English" if is_english else "French"
                     payload = {
                         "contents": [{
                             "parts": [{
-                                "text": f"Tu es l'ingénieur en chef du pilote ECOFARM CIRCULAR. Rédige un rapport technique concis avec 3 recommandations d'automatisation prioritaires en te basant sur ces données :\n{telemetry_summary}\nQuestion opérateur : {user_query or 'Optimisation globale'}"
+                                "text": f"You are the Lead Process & Energy Automation Engineer for the ECOFARM CIRCULAR pilot plant. Provide a concise, high-impact industrial engineering assessment with 3 priority PLC dispatch recommendations based on this telemetry (respond in {system_lang}):\n{telemetry_summary}\nOperator Query: {user_query or 'Global Enthalpy Optimization'}"
                             }]
                         }]
                     }
@@ -379,55 +550,88 @@ with tab_ai:
                     with urllib.request.urlopen(req, timeout=12) as resp:
                         res_data = json.loads(resp.read().decode())
                         analysis_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
-                except Exception as e:
+                except Exception:
                     pass
 
             if not analysis_text:
-                # Rapport expert autonome
-                status_msg = "INTERVERROUILLAGE ACTIF : Réchauffer le sable avant redémarrage" if telemetry['dryer_interlocked'] else "RÉGIME NOMINAL OPTIMAL"
-                dryer_directive = (
-                    "Inhiber la vis d'extraction du séchoir jusqu'à ce que le sable atteigne 180°C."
-                    if telemetry['dryer_interlocked']
-                    else "Maintenir le débit d'air chaud à 4 200 m³/h pour stabiliser l'humidité de sortie à 10.5%."
-                )
-                analysis_text = f"""
-                ### 📊 Diagnostic Énergétique ECOFARM CIRCULAR ({status_msg})
+                if is_english:
+                    status_msg = "INTERLOCK ACTIVE: Heat sand bed prior to restart" if telemetry['dryer_interlocked'] else "NOMINAL OPTIMAL OPERATION"
+                    dryer_directive = (
+                        "Inhibit biomass feed conveyor until sand core reaches >= 180°C threshold."
+                        if telemetry['dryer_interlocked']
+                        else "Maintain air circulation at 4,200 m³/h to stabilize output moisture at 10.5%."
+                    )
+                    analysis_text = f"""
+                    ### 📊 ECOFARM CIRCULAR Thermodynamic Diagnostic ({status_msg})
 
-                **1. Bilan d'Enthalpie Hybride :**
-                - Flux thermiques entrants cumulés : **{(telemetry['st_kw'] + telemetry['syngas_heat_kw'] + telemetry['pv_surplus_kw']):.1f} kW_th**
-                - Décharge vers le séchoir : **{telemetry['dryer_heat_kw']:.1f} kW_th**
-                - La stratification du massif de sable de quartz garantit un tampon d'inertie suffisant pour lisser les intermittences solaires.
+                    **1. Hybrid Enthalpy Balance:**
+                    - Cumulative hybrid thermal input: **{(telemetry['st_kw'] + telemetry['syngas_heat_kw'] + telemetry['pv_surplus_kw']):.1f} kW_th**
+                    - Convective dryer discharge: **{telemetry['dryer_heat_kw']:.1f} kW_th**
+                    - The 45-ton quartz sand thermal mass provides ample buffer inertia to smooth renewable fluctuations and ensure steady 24/7 valorization.
 
-                **2. Consignes Automatisées pour l'Automate (PLC) :**
-                1. {dryer_directive}
-                2. Dérouter en continu la totalité du surplus photovoltaïque ({telemetry['pv_surplus_kw']:.1f} kW) vers les thermoplongeurs Incoloy de la batterie à sable.
-                3. Conserver une température de pyrolyse à {pyro_temp_input}°C pour garantir une pureté en carbone fixe > 82% propice à la valorisation biofertilisante.
-                """
+                    **2. Automated Dispatch Directives for PLC:**
+                    1. {dryer_directive}
+                    2. Continuously divert all available PV surplus ({telemetry['pv_surplus_kw']:.1f} kW) into the Incoloy immersion heaters.
+                    3. Maintain pyrolysis retort temperature at {pyro_temp_input}°C to yield high fixed-carbon biochar (> 82%) for agricultural soil enrichment and verified carbon sink credit.
+                    """
+                else:
+                    status_msg = "INTERVERROUILLAGE ACTIF : Réchauffer le sable avant redémarrage" if telemetry['dryer_interlocked'] else "RÉGIME NOMINAL OPTIMAL"
+                    dryer_directive = (
+                        "Inhiber la vis d'extraction du séchoir jusqu'à ce que le sable atteigne 180°C."
+                        if telemetry['dryer_interlocked']
+                        else "Maintenir le débit d'air chaud à 4 200 m³/h pour stabiliser l'humidité de sortie à 10.5%."
+                    )
+                    analysis_text = f"""
+                    ### 📊 Diagnostic Énergétique ECOFARM CIRCULAR ({status_msg})
+
+                    **1. Bilan d'Enthalpie Hybride :**
+                    - Flux thermiques entrants cumulés : **{(telemetry['st_kw'] + telemetry['syngas_heat_kw'] + telemetry['pv_surplus_kw']):.1f} kW_th**
+                    - Décharge vers le séchoir : **{telemetry['dryer_heat_kw']:.1f} kW_th**
+                    - La stratification du massif de sable de quartz garantit un tampon d'inertie suffisant pour lisser les intermittences solaires.
+
+                    **2. Consignes Automatisées pour l'Automate (PLC) :**
+                    1. {dryer_directive}
+                    2. Dérouter en continu la totalité du surplus photovoltaïque ({telemetry['pv_surplus_kw']:.1f} kW) vers les thermoplongeurs Incoloy de la batterie à sable.
+                    3. Conserver une température de pyrolyse à {pyro_temp_input}°C pour garantir une pureté en carbone fixe > 82% propice à la valorisation biofertilisante.
+                    """
 
             st.markdown(analysis_text)
 
-# ONGLET 4 : GitHub Sync
+# TAB 4: GitHub Sync
 with tab_github:
-    st.markdown("#### Synchronisation Sécurisée avec GitHub")
-    st.caption("Gestion du déploiement continu et intégration automatique sans saisie bloquante.")
+    header = "#### Secure GitHub Deployment & Continuous Synchronization" if is_english else "#### Synchronisation Sécurisée avec GitHub"
+    caption = "Automated continuous integration and push to GitHub without interactive blocking." if is_english else "Gestion du déploiement continu et intégration automatique sans saisie bloquante."
+    st.markdown(header)
+    st.caption(caption)
     
     if GITHUB_TOKEN:
-        st.success("✅ **Token GitHub configuré** dans les secrets (`st.secrets['GITHUB_TOKEN']`).")
+        msg = "✅ **GitHub Token configured** in secrets (`st.secrets['GITHUB_TOKEN']`)." if is_english else "✅ **Token GitHub configuré** dans les secrets (`st.secrets['GITHUB_TOKEN']`)."
+        st.success(msg)
     else:
-        st.info("ℹ️ Aucun Token GitHub configuré dans `st.secrets`. Le script `scripts/github_sync.py` peut être exécuté en ligne de commande locale ou via GitHub Actions.")
+        msg = "ℹ️ No GitHub Token configured in `st.secrets`. The `scripts/github_sync.py` script can be run locally or via GitHub Actions." if is_english else "ℹ️ Aucun Token GitHub configuré dans `st.secrets`. Le script `scripts/github_sync.py` peut être exécuté en ligne de commande locale ou via GitHub Actions."
+        st.info(msg)
     
     st.code("""
-# Déploiement direct avec le script Python :
+# Direct synchronization via Python script:
 python scripts/github_sync.py --repo ecofarm-circular
 
-# Ou via npm :
+# Or via npm script:
 npm run github:push
     """, language="bash")
     
-    st.markdown("""
-    **Configuration dans Streamlit Cloud :**
-    - **Repository :** Votre dépôt GitHub (ex: `votre-nom/ecofarm-circular`)
-    - **Branch :** `main`
-    - **Main file path :** `app.py`
-    - **Python version :** `3.10` ou `3.11`
-    """)
+    if is_english:
+        st.markdown("""
+        **Streamlit Cloud Settings:**
+        - **Repository:** Your GitHub repository (e.g. `your-username/ecofarm-circular`)
+        - **Branch:** `main`
+        - **Main file path:** `app.py`
+        - **Python version:** `3.10` or `3.11`
+        """)
+    else:
+        st.markdown("""
+        **Configuration dans Streamlit Cloud :**
+        - **Repository :** Votre dépôt GitHub (ex: `votre-nom/ecofarm-circular`)
+        - **Branch :** `main`
+        - **Main file path :** `app.py`
+        - **Python version :** `3.10` ou `3.11`
+        """)

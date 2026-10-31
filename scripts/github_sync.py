@@ -2,27 +2,27 @@
 """
 ECOFARM CIRCULAR — GitHub Direct Integration & Synchronization Script
 ---------------------------------------------------------------------
-Script Python autonome (zéro dépendance externe requise, utilise uniquement la bibliothèque standard Python 3).
+Autonomous Python script (zero external dependencies, standard library only).
 
-Fonctionnalités :
-1. Vérification et initialisation automatique du dépôt Git local.
-2. Création automatique du dépôt distant sur GitHub via l'API REST GitHub (si le dépôt n'existe pas encore).
-3. Configuration de la branche principale 'main' et du remote 'origin'.
-4. Détection et respect du fichier .gitignore (exclusion de node_modules, .next, etc.).
-5. Indexation (git add), commit avec horodatage et message structuré.
-6. Push sécurisé vers GitHub avec authentification par Token d'accès personnel (PAT).
+Features:
+1. Automatic verification and initialization of the local Git repository.
+2. Automatic remote GitHub repository creation via GitHub REST API if not yet existing.
+3. Configures default branch 'main' and 'origin' remote.
+4. Adheres strictly to .gitignore exclusions.
+5. Indexing (git add) and structured commits.
+6. Secure push to GitHub with Personal Access Token (PAT) authentication.
 
-Utilisation :
-    # Mode interactif :
+Usage:
+    # Interactive mode:
     python scripts/github_sync.py
 
-    # Mode ligne de commande avec arguments :
-    python scripts/github_sync.py --repo ecofarm-circular --token ghp_votre_token
+    # Command-line mode:
+    python scripts/github_sync.py --repo ecofarm-circular --token ghp_your_token
 
-    # Options :
-    --private       Créer le dépôt GitHub en mode privé (par défaut : public)
-    --message       Message de commit personnalisé
-    --org           Nom d'une organisation GitHub (optionnel)
+    # Options:
+    --private       Create GitHub repository in private mode (default: public)
+    --message       Custom commit message
+    --org           GitHub organization name (optional)
 """
 
 import os
@@ -35,7 +35,7 @@ import urllib.request
 import urllib.error
 from datetime import datetime
 
-# Couleurs ANSI pour terminal
+# ANSI Terminal Colors
 GREEN = "\033[92m"
 BLUE = "\033[94m"
 YELLOW = "\033[93m"
@@ -53,15 +53,15 @@ def log_success(msg: str):
 
 
 def log_warning(msg: str):
-    print(f"{YELLOW}[AVERTISSEMENT]{RESET} {msg}")
+    print(f"{YELLOW}[WARNING]{RESET} {msg}")
 
 
 def log_error(msg: str):
-    print(f"{RED}[ERREUR]{RESET} {msg}")
+    print(f"{RED}[ERROR]{RESET} {msg}")
 
 
 def run_cmd(cmd: list, cwd: str = None) -> tuple[int, str, str]:
-    """Exécute une commande shell et retourne le code de retour, stdout et stderr."""
+    """Execute shell command and return returncode, stdout, and stderr."""
     try:
         proc = subprocess.Popen(
             cmd,
@@ -77,18 +77,18 @@ def run_cmd(cmd: list, cwd: str = None) -> tuple[int, str, str]:
 
 
 def check_git_installed() -> bool:
-    """Vérifie si Git est disponible sur la machine."""
+    """Verify Git is installed and available in PATH."""
     code, out, _ = run_cmd(["git", "--version"])
     if code != 0:
-        log_error("Git n'est pas installé ou n'est pas présent dans le PATH.")
-        log_info("Veuillez installer Git : https://git-scm.com/downloads")
+        log_error("Git is not installed or not found in PATH.")
+        log_info("Please install Git: https://git-scm.com/downloads")
         return False
-    log_info(f"Version de Git détectée : {out}")
+    log_info(f"Detected Git version: {out}")
     return True
 
 
 def get_current_user(token: str) -> dict | None:
-    """Récupère le profil de l'utilisateur GitHub connecté via le Token."""
+    """Retrieve the authenticated GitHub user profile using the token."""
     req = urllib.request.Request(
         "https://api.github.com/user",
         headers={
@@ -98,277 +98,203 @@ def get_current_user(token: str) -> dict | None:
         }
     )
     try:
-        with urllib.request.urlopen(req) as resp:
-            data = json.loads(resp.read().decode())
-            return data
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
-        log_error(f"Échec d'authentification GitHub (HTTP {e.code}) : {e.reason}")
         if e.code == 401:
-            log_error("Votre Token GitHub est invalide ou expiré.")
+            log_error("GitHub Token is invalid or expired (HTTP 401 Unauthorized).")
+        elif e.code == 403:
+            log_error("API rate limit exceeded or insufficient token scopes (HTTP 403 Forbidden).")
+        else:
+            log_error(f"GitHub API Error: {e.code} - {e.reason}")
         return None
     except Exception as e:
-        log_error(f"Erreur de connexion à l'API GitHub : {e}")
+        log_error(f"Connection error to GitHub API: {e}")
         return None
 
 
-def repo_exists(owner: str, repo_name: str, token: str) -> bool:
-    """Vérifie si le dépôt distant existe déjà sur GitHub."""
+def create_remote_repo(token: str, repo_name: str, private: bool = False, org: str = None) -> str | None:
+    """Create a new GitHub repository via the REST API."""
+    url = f"https://api.github.com/orgs/{org}/repos" if org else "https://api.github.com/user/repos"
+    payload = {
+        "name": repo_name,
+        "description": "ECOFARM CIRCULAR — 3D Industrial Engineering Digital Twin & Biomass Valorization Plant",
+        "private": private,
+        "auto_init": False
+    }
+    data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
-        f"https://api.github.com/repos/{owner}/{repo_name}",
+        url,
+        data=data,
         headers={
             "Authorization": f"token {token}",
             "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json",
             "User-Agent": "Ecofarm-Circular-Integration"
         }
     )
     try:
-        with urllib.request.urlopen(req) as resp:
-            return resp.status == 200
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            res_data = json.loads(resp.read().decode("utf-8"))
+            log_success(f"GitHub repository created successfully: {res_data.get('html_url')}")
+            return res_data.get("clone_url")
     except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return False
-        return False
-    except Exception:
-        return False
-
-
-def create_github_repo(repo_name: str, description: str, is_private: bool, token: str, org: str = None) -> str | None:
-    """Crée un nouveau dépôt sur GitHub via l'API REST."""
-    payload = {
-        "name": repo_name,
-        "description": description,
-        "private": is_private,
-        "has_issues": True,
-        "has_projects": True,
-        "has_wiki": False,
-        "auto_init": False
-    }
-
-    url = f"https://api.github.com/orgs/{org}/repos" if org else "https://api.github.com/user/repos"
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Authorization": f"token {token}",
-            "Content-Type": "application/json",
-            "Accept": "application/vnd.github.v3+json",
-            "User-Agent": "Ecofarm-Circular-Integration"
-        },
-        method="POST"
-    )
-
-    try:
-        with urllib.request.urlopen(req) as resp:
-            data = json.loads(resp.read().decode())
-            clone_url = data.get("clone_url")
-            log_success(f"Dépôt créé avec succès sur GitHub : {data.get('html_url')}")
-            return clone_url
-    except urllib.error.HTTPError as e:
-        err_msg = e.read().decode()
-        log_error(f"Impossible de créer le dépôt (HTTP {e.code}) : {err_msg}")
-        return None
-    except Exception as e:
-        log_error(f"Erreur inattendue lors de la création : {e}")
-        return None
-
-
-def load_dotenv_file(root_dir: str):
-    """Charge automatiquement les variables d'environnement depuis .env.local ou .env."""
-    for filename in [".env.local", ".env"]:
-        env_path = os.path.join(root_dir, filename)
-        if os.path.isfile(env_path):
+        if e.code == 422:
+            log_info(f"Repository '{repo_name}' already exists on GitHub. Proceeding with sync.")
+            user_info = get_current_user(token)
+            owner = org if org else (user_info.get("login") if user_info else "")
+            return f"https://github.com/{owner}/{repo_name}.git"
+        else:
+            log_error(f"Failed to create repository: HTTP {e.code} - {e.reason}")
             try:
-                with open(env_path, "r", encoding="utf-8") as f:
-                    for line in f:
-                        line = line.strip()
-                        if line and not line.startswith("#") and "=" in line:
-                            k, v = line.split("=", 1)
-                            k = k.strip()
-                            v = v.strip().strip('"').strip("'")
-                            if k not in os.environ and v:
-                                os.environ[k] = v
-                log_info(f"Fichier de configuration d'environnement chargé : {filename}")
-                break
+                body = e.read().decode("utf-8")
+                log_error(f"Details: {body}")
             except Exception:
                 pass
+            return None
+    except Exception as e:
+        log_error(f"Unexpected error while creating repository: {e}")
+        return None
 
 
 def main():
-    print(f"\n{BOLD}{GREEN}======================================================{RESET}")
-    print(f"{BOLD}{GREEN}  ECOFARM CIRCULAR — INTÉGRATION DIRECTE DANS GITHUB  {RESET}")
-    print(f"{BOLD}{GREEN}======================================================{RESET}\n")
-
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    os.chdir(project_root)
-    load_dotenv_file(project_root)
-
-    parser = argparse.ArgumentParser(description="Synchronisation directe du projet ECOFARM CIRCULAR avec GitHub")
-    parser.add_argument("--repo", type=str, help="Nom du dépôt GitHub (ex: ecofarm-circular)")
-    parser.add_argument("--token", type=str, help="GitHub Personal Access Token (PAT)")
-    parser.add_argument("--message", type=str, default=None, help="Message du commit Git")
-    parser.add_argument("--private", action="store_true", help="Rendre le dépôt privé sur GitHub")
-    parser.add_argument("--org", type=str, default=None, help="Nom de l'organisation GitHub cible (optionnel)")
+    parser = argparse.ArgumentParser(
+        description="Automated synchronization of ECOFARM CIRCULAR to GitHub."
+    )
+    parser.add_argument("--token", "-t", help="GitHub Personal Access Token (classic with 'repo' scope)")
+    parser.add_argument("--repo", "-r", default="ecofarm-circular", help="Target repository name (default: ecofarm-circular)")
+    parser.add_argument("--private", action="store_true", help="Create repository in private mode (default: public)")
+    parser.add_argument("--org", help="Target GitHub organization name (optional)")
+    parser.add_argument("--message", "-m", help="Custom commit message")
 
     args = parser.parse_args()
 
-    # 1. Vérification de Git
+    print(f"\n{BOLD}{GREEN}======================================================{RESET}")
+    print(f"{BOLD}{GREEN}   ECOFARM CIRCULAR — GitHub Automated Deployment    {RESET}")
+    print(f"{BOLD}{GREEN}======================================================{RESET}\n")
+
+    # 1. Verify Git installation
     if not check_git_installed():
         sys.exit(1)
 
-    # 2. Récupération du Token GitHub (priorité : argument > st.secrets > variable d'environnement / .env > saisie interactive si TTY)
+    # 2. Retrieve GitHub Token
     token = args.token or os.environ.get("GITHUB_TOKEN")
-    if not token or token == "ghp_YOUR_GITHUB_PERSONAL_ACCESS_TOKEN":
+
+    # Check Streamlit secrets if available
+    if not token:
         try:
-            import streamlit as st
-            if hasattr(st, "secrets") and "GITHUB_TOKEN" in st.secrets:
-                token = str(st.secrets["GITHUB_TOKEN"])
-                log_info("Token GitHub récupéré depuis st.secrets.")
+            import toml
+            secrets_path = os.path.expanduser("~/.streamlit/secrets.toml")
+            if os.path.exists(secrets_path):
+                secrets = toml.load(secrets_path)
+                token = secrets.get("GITHUB_TOKEN")
         except Exception:
             pass
 
-    if not token or token == "ghp_YOUR_GITHUB_PERSONAL_ACCESS_TOKEN":
-        # Vérification si le terminal est interactif (TTY)
-        if sys.stdin and sys.stdin.isatty():
-            print(f"{YELLOW}Pour vous connecter à GitHub, vous devez utiliser un Personal Access Token (PAT).{RESET}")
-            print("Pour générer un token en 1 minute : Rendez-vous sur https://github.com/settings/tokens")
-            print("Cochez la permission 'repo' (Full control of private repositories).\n")
-            try:
-                token = input(f"{BOLD}Entrez votre GitHub Token (PAT) : {RESET}").strip()
-            except (KeyboardInterrupt, EOFError):
-                print("\nOpération annulée.")
-                sys.exit(0)
-        else:
-            log_error("GITHUB_TOKEN non trouvé dans l'environnement, st.secrets ou .env.")
-            log_info("En mode non-interactif (CI/CD ou Streamlit), définissez la variable d'environnement GITHUB_TOKEN ou st.secrets['GITHUB_TOKEN'].")
+    if not token:
+        try:
+            print("To push to GitHub, a Personal Access Token (classic) with 'repo' scope is required.")
+            print("Generate one here: https://github.com/settings/tokens/new?scopes=repo&description=ECOFARM-Sync\n")
+            token = input(f"{BOLD}Enter your GitHub Token (ghp_...): {RESET}").strip()
+        except (KeyboardInterrupt, EOFError):
+            print("\nAborted.")
             sys.exit(1)
 
     if not token:
-        log_error("Aucun Token GitHub valide fourni. Arrêt du script.")
+        log_error("No GitHub Token provided. Aborting synchronization.")
         sys.exit(1)
 
-    # 3. Test de validité du token et identification de l'utilisateur
-    log_info("Vérification de l'authentification GitHub...")
+    # 3. Validate Token
+    log_info("Validating GitHub credentials...")
     user_info = get_current_user(token)
     if not user_info:
+        log_error("Failed to authenticate with GitHub. Check your token and permissions.")
         sys.exit(1)
 
     username = user_info.get("login")
-    log_success(f"Authentifié en tant que : {BOLD}@{username}{RESET} ({user_info.get('name') or username})")
+    name = user_info.get("name") or username
+    log_success(f"Authenticated as: {BOLD}{name}{RESET} (@{username})")
 
-    # Configuration automatique de l'auteur Git si manquant
-    _, user_name_val, _ = run_cmd(["git", "config", "user.name"])
-    _, user_email_val, _ = run_cmd(["git", "config", "user.email"])
-    if not user_name_val:
-        git_author_name = user_info.get("name") or username
-        run_cmd(["git", "config", "user.name", git_author_name])
-        log_info(f"Configuration automatique de git user.name : '{git_author_name}'")
-    if not user_email_val:
-        git_author_email = user_info.get("email") or f"{username}@users.noreply.github.com"
-        run_cmd(["git", "config", "user.email", git_author_email])
-        log_info(f"Configuration automatique de git user.email : '{git_author_email}'")
-
-    # 4. Nom du dépôt (priorité : argument > GITHUB_REPO dans .env/st.secrets > défaut)
-    repo_name = args.repo or os.environ.get("GITHUB_REPO")
-    if not repo_name:
-        try:
-            import streamlit as st
-            if hasattr(st, "secrets") and "GITHUB_REPO" in st.secrets:
-                repo_name = str(st.secrets["GITHUB_REPO"])
-        except Exception:
-            pass
-
-    if not repo_name:
-        default_name = "ecofarm-circular"
-        if sys.stdin and sys.stdin.isatty():
-            try:
-                input_name = input(f"Nom du dépôt GitHub [{default_name}] : ").strip()
-                repo_name = input_name if input_name else default_name
-            except (KeyboardInterrupt, EOFError):
-                print("\nOpération annulée.")
-                sys.exit(0)
-        else:
-            repo_name = default_name
-
+    repo_name = args.repo
     owner = args.org if args.org else username
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    os.chdir(project_root)
-    log_info(f"Répertoire du projet : {project_root}")
 
-    # 5. Vérifier ou créer le dépôt distant
-    log_info(f"Vérification de l'existence du dépôt '{owner}/{repo_name}' sur GitHub...")
-    if repo_exists(owner, repo_name, token):
-        log_info(f"Le dépôt distant 'https://github.com/{owner}/{repo_name}' existe déjà.")
-    else:
-        log_info(f"Le dépôt n'existe pas encore. Création automatique sur GitHub...")
-        desc = "ECOFARM CIRCULAR — 3D Industrial Engineering Visualization and Digital Twin pilot plant."
-        created_url = create_github_repo(repo_name, desc, args.private, token, args.org)
-        if not created_url:
-            log_error("Impossible de poursuivre sans dépôt distant.")
+    # 4. Check/Create Remote Repository
+    log_info(f"Target repository: '{owner}/{repo_name}' (Visibility: {'Private' if args.private else 'Public'})...")
+    remote_url = create_remote_repo(token, repo_name, private=args.private, org=args.org)
+
+    if not remote_url:
+        log_error("Failed to configure remote repository URL.")
+        sys.exit(1)
+
+    # 5. Git Repository Initialization
+    git_dir = os.path.join(os.getcwd(), ".git")
+    if not os.path.exists(git_dir):
+        log_info("Initializing local Git repository (git init)...")
+        code, out, err = run_cmd(["git", "init"])
+        if code != 0:
+            log_error(f"git init failed: {err}")
             sys.exit(1)
+        run_cmd(["git", "branch", "-M", "main"])
+    else:
+        log_info("Local Git repository already initialized.")
 
-    # 6. Initialisation et configuration Git locale
-    log_info("Préparation du dépôt Git local...")
-    code, _, _ = run_cmd(["git", "status"])
-    if code != 0:
-        log_info("Initialisation de Git (git init)...")
-        run_cmd(["git", "init"])
+    # Configure user name and email if not set
+    _, git_name, _ = run_cmd(["git", "config", "user.name"])
+    if not git_name:
+        run_cmd(["git", "config", "user.name", name])
+        run_cmd(["git", "config", "user.email", f"{username}@users.noreply.github.com"])
 
-    # Configuration de la branche 'main'
-    run_cmd(["git", "branch", "-M", "main"])
-
-    # Configuration du remote origin avec token sécurisé pour le push
+    # 6. Configure Remote with authenticated token
     remote_url_with_auth = f"https://{token}@github.com/{owner}/{repo_name}.git"
     public_remote_url = f"https://github.com/{owner}/{repo_name}.git"
 
-    # Vérifier les remotes existants
     code, remotes, _ = run_cmd(["git", "remote"])
     if "origin" in remotes.split():
         run_cmd(["git", "remote", "set-url", "origin", remote_url_with_auth])
     else:
         run_cmd(["git", "remote", "add", "origin", remote_url_with_auth])
 
-    # 7. Indexation (git add) et Commit
-    log_info("Indexation des fichiers du projet (respect de .gitignore)...")
+    # 7. Index and Commit
+    log_info("Staging project files (respecting .gitignore)...")
     run_cmd(["git", "add", "."])
 
     commit_msg = args.message or f"feat: ECOFARM CIRCULAR industrial 3D digital twin release ({datetime.now().strftime('%Y-%m-%d %H:%M')})"
-    log_info(f"Commit des modifications avec le message : '{commit_msg}'")
+    log_info(f"Committing changes: '{commit_msg}'")
     code, out, err = run_cmd(["git", "commit", "-m", commit_msg])
     if code != 0:
         if "nothing to commit" in out or "nothing to commit" in err:
-            log_info("Aucune nouvelle modification locale à commiter.")
+            log_info("No new local modifications to commit.")
         else:
-            log_warning(f"Sortie commit : {err or out}")
+            log_warning(f"Commit output: {err or out}")
 
-    # 8. Push vers GitHub
-    log_info(f"Envoi des fichiers vers GitHub (branche 'main')...")
+    # 8. Push to GitHub
+    log_info("Pushing files to GitHub ('main' branch)...")
     code, out, err = run_cmd(["git", "push", "-u", "origin", "main"])
 
     if code == 0:
         log_success("\n======================================================")
-        log_success(f"PROJET ENVOYÉ SUR GITHUB AVEC SUCCÈS !")
-        log_success(f"URL de votre dépôt : {BOLD}{public_remote_url}{RESET}")
+        log_success("PROJECT PUSHED TO GITHUB SUCCESSFULLY!")
+        log_success(f"Repository URL: {BOLD}{public_remote_url}{RESET}")
         log_success("======================================================\n")
 
-        # Nettoyage du token dans la configuration locale pour éviter de laisser le secret en clair
+        # Sanitize token from local origin URL
         run_cmd(["git", "remote", "set-url", "origin", public_remote_url])
-        log_info("Le remote local a été réinitialisé vers l'URL publique propre (sans token en clair).")
+        log_info("Local origin remote sanitized back to clean public URL.")
     else:
-        # En cas de conflit (dépôt distant non vide), proposer le push forcé
-        log_error(f"Échec de l'envoi vers GitHub : {err or out}")
+        log_error(f"Failed to push to GitHub: {err or out}")
         if "fetch first" in err or "rejected" in err:
-            log_warning("Le dépôt distant contient des fichiers qui n'existent pas en local.")
+            log_warning("Remote repository contains commits not present locally.")
             try:
-                retry = input("Voulez-vous forcer la synchronisation (git push --force) ? [o/N] : ").strip().lower()
-                if retry in ["o", "oui", "y", "yes"]:
-                    log_info("Envoi forcé en cours...")
+                retry = input("Force push and overwrite remote (git push --force)? [y/N]: ").strip().lower()
+                if retry in ["y", "yes"]:
+                    log_info("Force pushing...")
                     c_force, out_f, err_f = run_cmd(["git", "push", "-u", "origin", "main", "--force"])
                     if c_force == 0:
-                        log_success(f"\nSynchronisation forcée réussie : {BOLD}{public_remote_url}{RESET}\n")
+                        log_success(f"\nForce push successful: {BOLD}{public_remote_url}{RESET}\n")
                         run_cmd(["git", "remote", "set-url", "origin", public_remote_url])
                         return
                     else:
-                        log_error(f"Échec du push forcé : {err_f or out_f}")
+                        log_error(f"Force push failed: {err_f or out_f}")
             except (KeyboardInterrupt, EOFError):
                 pass
         sys.exit(1)
