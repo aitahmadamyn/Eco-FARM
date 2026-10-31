@@ -10,6 +10,15 @@ import urllib.error
 import streamlit as st
 import streamlit.components.v1 as components
 
+# Import du moteur de rendu 3D WebGL natif (lib/streamlit_3d.py)
+try:
+    from lib.streamlit_3d import get_3d_viewer_html
+except ImportError:
+    import sys
+    from pathlib import Path
+    sys.path.append(str(Path(__file__).parent))
+    from lib.streamlit_3d import get_3d_viewer_html
+
 # Configuration de la page Streamlit
 st.set_page_config(
     page_title="ECOFARM CIRCULAR — Jumeau Numérique",
@@ -29,7 +38,7 @@ def get_secret(key_name: str, default: str = "") -> str:
 
 GEMINI_API_KEY = get_secret("GEMINI_API_KEY")
 GITHUB_TOKEN = get_secret("GITHUB_TOKEN")
-APP_URL = get_secret("APP_URL", "https://ais-dev-geza7h24qgk2oiyhuwq6ql-52899747405.europe-west2.run.app")
+APP_URL = get_secret("APP_URL", "")
 
 # Données statiques d'ingénierie pour les 6 zones fonctionnelles
 ZONES_DATA = {
@@ -277,12 +286,27 @@ tab_viz, tab_zones, tab_ai, tab_github = st.tabs([
 # ONGLET 1 : Visualisation 3D
 with tab_viz:
     st.markdown("#### Jumeau Numérique 3D — Vue Interactive en Temps Réel")
-    st.caption("Vous pouvez inspecter l'ensemble de l'installation, faire pivoter la caméra, zoomer et observer les flux de matière et de chaleur.")
+    st.caption("Inspectez l'ensemble de l'installation industrielle : 6 zones, batterie à sable, flux thermiques et de matière animés.")
     
-    # Intégration iframe de l'application WebGL Three.js
-    components.iframe(APP_URL, height=620, scrolling=False)
+    # Rendu 3D WebGL Three.js 100% natif et autonome (aucun serveur externe, élimine l'erreur 403 Google)
+    if APP_URL and APP_URL.startswith("http"):
+        viewer_mode = st.radio(
+            "Mode d'affichage 3D :",
+            ["🌟 Moteur 3D WebGL Intégré (Recommandé - Direct & Sécurisé)", "🌐 Serveur Web Externe (Iframe)"],
+            horizontal=True,
+            label_visibility="collapsed"
+        )
+        if "Intégré" in viewer_mode:
+            html_content = get_3d_viewer_html(telemetry)
+            components.html(html_content, height=680, scrolling=False)
+        else:
+            components.iframe(APP_URL, height=680, scrolling=False)
+    else:
+        # Affichage natif direct
+        html_content = get_3d_viewer_html(telemetry)
+        components.html(html_content, height=680, scrolling=False)
     
-    st.info("💡 **Navigation :** Clic gauche pour orbiter • Molette pour zoomer • Clic droit pour déplacer. Vous pouvez également appuyer sur **H** pour masquer les contrôles ou **M** pour passer en mode écorché.")
+    st.info("💡 **Contrôles 3D :** Clic gauche pour orbiter • Molette pour zoomer • Clic droit pour déplacer. Utilisez les boutons sous la scène pour changer d'angle (Isométrique, Pyrolyse, Séchoir, Batterie Sable) ou activer le mode Écorché (X-Ray).")
 
 # ONGLET 2 : Zones P&ID
 with tab_zones:
