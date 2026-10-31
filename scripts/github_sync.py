@@ -172,10 +172,35 @@ def create_github_repo(repo_name: str, description: str, is_private: bool, token
         return None
 
 
+def load_dotenv_file(root_dir: str):
+    """Charge automatiquement les variables d'environnement depuis .env.local ou .env."""
+    for filename in [".env.local", ".env"]:
+        env_path = os.path.join(root_dir, filename)
+        if os.path.isfile(env_path):
+            try:
+                with open(env_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith("#") and "=" in line:
+                            k, v = line.split("=", 1)
+                            k = k.strip()
+                            v = v.strip().strip('"').strip("'")
+                            if k not in os.environ and v:
+                                os.environ[k] = v
+                log_info(f"Fichier de configuration d'environnement chargé : {filename}")
+                break
+            except Exception:
+                pass
+
+
 def main():
     print(f"\n{BOLD}{GREEN}======================================================{RESET}")
     print(f"{BOLD}{GREEN}  ECOFARM CIRCULAR — INTÉGRATION DIRECTE DANS GITHUB  {RESET}")
     print(f"{BOLD}{GREEN}======================================================{RESET}\n")
+
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    os.chdir(project_root)
+    load_dotenv_file(project_root)
 
     parser = argparse.ArgumentParser(description="Synchronisation directe du projet ECOFARM CIRCULAR avec GitHub")
     parser.add_argument("--repo", type=str, help="Nom du dépôt GitHub (ex: ecofarm-circular)")
@@ -190,11 +215,11 @@ def main():
     if not check_git_installed():
         sys.exit(1)
 
-    # 2. Récupération du Token GitHub (priorité : argument > variable d'environnement > saisie interactive)
+    # 2. Récupération du Token GitHub (priorité : argument > variable d'environnement / .env > saisie interactive)
     token = args.token or os.environ.get("GITHUB_TOKEN")
-    if not token:
+    if not token or token == "ghp_YOUR_GITHUB_PERSONAL_ACCESS_TOKEN":
         print(f"{YELLOW}Pour vous connecter à GitHub, vous devez utiliser un Personal Access Token (PAT).{RESET}")
-        print("Pour générer un token : Rendez-vous sur https://github.com/settings/tokens")
+        print("Pour générer un token en 1 minute : Rendez-vous sur https://github.com/settings/tokens")
         print("Cochez la permission 'repo' (Full control of private repositories).\n")
         try:
             token = input(f"{BOLD}Entrez votre GitHub Token (PAT) : {RESET}").strip()
@@ -215,8 +240,20 @@ def main():
     username = user_info.get("login")
     log_success(f"Authentifié en tant que : {BOLD}@{username}{RESET} ({user_info.get('name') or username})")
 
-    # 4. Nom du dépôt
-    repo_name = args.repo
+    # Configuration automatique de l'auteur Git si manquant
+    _, user_name_val, _ = run_cmd(["git", "config", "user.name"])
+    _, user_email_val, _ = run_cmd(["git", "config", "user.email"])
+    if not user_name_val:
+        git_author_name = user_info.get("name") or username
+        run_cmd(["git", "config", "user.name", git_author_name])
+        log_info(f"Configuration automatique de git user.name : '{git_author_name}'")
+    if not user_email_val:
+        git_author_email = user_info.get("email") or f"{username}@users.noreply.github.com"
+        run_cmd(["git", "config", "user.email", git_author_email])
+        log_info(f"Configuration automatique de git user.email : '{git_author_email}'")
+
+    # 4. Nom du dépôt (priorité : argument > GITHUB_REPO dans .env > défaut)
+    repo_name = args.repo or os.environ.get("GITHUB_REPO")
     if not repo_name:
         default_name = "ecofarm-circular"
         try:
