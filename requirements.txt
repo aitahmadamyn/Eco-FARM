@@ -1,0 +1,20 @@
+# ECOFARM CIRCULAR — Python Dependencies
+# -------------------------------------------------------------
+# Note : Le script d'intégration GitHub (scripts/github_sync.py)
+# fonctionne directement avec la bibliothèque standard Python 3
+# sans aucune dépendance obligatoire.
+#
+# Les bibliothèques ci-dessous sont recommandées pour l'automatisation avancée,
+# le chargement des variables d'environnement (.env) et l'API GitHub :
+
+# Gestion des requêtes HTTP et API REST GitHub
+requests>=2.31.0
+
+# SDK officiel GitHub API pour Python (optionnel pour scripts avancés)
+PyGithub>=2.1.1
+
+# Chargement automatique des fichiers .env (GITHUB_TOKEN, GEMINI_API_KEY)
+python-dotenv>=1.0.0
+
+# Sérialisation et validation
+urllib3>=2.0.0

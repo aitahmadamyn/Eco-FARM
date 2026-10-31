@@ -1,0 +1,3 @@
+# ECOFARM CIRCULAR — Python Dependencies
+# Alias vers requirements.txt
+-r requirements.txt
