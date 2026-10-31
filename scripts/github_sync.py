@@ -215,20 +215,35 @@ def main():
     if not check_git_installed():
         sys.exit(1)
 
-    # 2. Récupération du Token GitHub (priorité : argument > variable d'environnement / .env > saisie interactive)
+    # 2. Récupération du Token GitHub (priorité : argument > st.secrets > variable d'environnement / .env > saisie interactive si TTY)
     token = args.token or os.environ.get("GITHUB_TOKEN")
     if not token or token == "ghp_YOUR_GITHUB_PERSONAL_ACCESS_TOKEN":
-        print(f"{YELLOW}Pour vous connecter à GitHub, vous devez utiliser un Personal Access Token (PAT).{RESET}")
-        print("Pour générer un token en 1 minute : Rendez-vous sur https://github.com/settings/tokens")
-        print("Cochez la permission 'repo' (Full control of private repositories).\n")
         try:
-            token = input(f"{BOLD}Entrez votre GitHub Token (PAT) : {RESET}").strip()
-        except (KeyboardInterrupt, EOFError):
-            print("\nOpération annulée.")
-            sys.exit(0)
+            import streamlit as st
+            if hasattr(st, "secrets") and "GITHUB_TOKEN" in st.secrets:
+                token = str(st.secrets["GITHUB_TOKEN"])
+                log_info("Token GitHub récupéré depuis st.secrets.")
+        except Exception:
+            pass
+
+    if not token or token == "ghp_YOUR_GITHUB_PERSONAL_ACCESS_TOKEN":
+        # Vérification si le terminal est interactif (TTY)
+        if sys.stdin and sys.stdin.isatty():
+            print(f"{YELLOW}Pour vous connecter à GitHub, vous devez utiliser un Personal Access Token (PAT).{RESET}")
+            print("Pour générer un token en 1 minute : Rendez-vous sur https://github.com/settings/tokens")
+            print("Cochez la permission 'repo' (Full control of private repositories).\n")
+            try:
+                token = input(f"{BOLD}Entrez votre GitHub Token (PAT) : {RESET}").strip()
+            except (KeyboardInterrupt, EOFError):
+                print("\nOpération annulée.")
+                sys.exit(0)
+        else:
+            log_error("GITHUB_TOKEN non trouvé dans l'environnement, st.secrets ou .env.")
+            log_info("En mode non-interactif (CI/CD ou Streamlit), définissez la variable d'environnement GITHUB_TOKEN ou st.secrets['GITHUB_TOKEN'].")
+            sys.exit(1)
 
     if not token:
-        log_error("Aucun Token GitHub fourni. Arrêt du script.")
+        log_error("Aucun Token GitHub valide fourni. Arrêt du script.")
         sys.exit(1)
 
     # 3. Test de validité du token et identification de l'utilisateur
@@ -252,16 +267,27 @@ def main():
         run_cmd(["git", "config", "user.email", git_author_email])
         log_info(f"Configuration automatique de git user.email : '{git_author_email}'")
 
-    # 4. Nom du dépôt (priorité : argument > GITHUB_REPO dans .env > défaut)
+    # 4. Nom du dépôt (priorité : argument > GITHUB_REPO dans .env/st.secrets > défaut)
     repo_name = args.repo or os.environ.get("GITHUB_REPO")
     if not repo_name:
-        default_name = "ecofarm-circular"
         try:
-            input_name = input(f"Nom du dépôt GitHub [{default_name}] : ").strip()
-            repo_name = input_name if input_name else default_name
-        except (KeyboardInterrupt, EOFError):
-            print("\nOpération annulée.")
-            sys.exit(0)
+            import streamlit as st
+            if hasattr(st, "secrets") and "GITHUB_REPO" in st.secrets:
+                repo_name = str(st.secrets["GITHUB_REPO"])
+        except Exception:
+            pass
+
+    if not repo_name:
+        default_name = "ecofarm-circular"
+        if sys.stdin and sys.stdin.isatty():
+            try:
+                input_name = input(f"Nom du dépôt GitHub [{default_name}] : ").strip()
+                repo_name = input_name if input_name else default_name
+            except (KeyboardInterrupt, EOFError):
+                print("\nOpération annulée.")
+                sys.exit(0)
+        else:
+            repo_name = default_name
 
     owner = args.org if args.org else username
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))

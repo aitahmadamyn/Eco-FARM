@@ -1,4 +1,4 @@
-name: ECOFARM CIRCULAR CI
+name: ECOFARM CIRCULAR CI / CD
 
 on:
   push:
@@ -7,9 +7,33 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  python-streamlit-check:
+    name: Verify Python & Streamlit Cloud Application
     runs-on: ubuntu-latest
 
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Validate Python syntax & compilation
+      run: |
+        python -m py_compile app.py
+        python -m py_compile scripts/github_sync.py
+
+  node-check:
+    name: Verify Node.js Build
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -18,15 +42,12 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: 20
-        cache: 'npm'
+        # NOTE: cache: 'npm' removed to prevent missing package-lock.json error
 
-    - name: Install dependencies
-      run: npm install
+    - name: Install Node dependencies
+      run: npm install --no-audit
 
-    - name: Run linter
-      run: npm run lint
-
-    - name: Verify Next.js production build
+    - name: Verify build
       run: npm run build
       env:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

@@ -1,3 +1,2 @@
-# ECOFARM CIRCULAR — Python Dependencies
-# Alias vers requirements.txt
+# ECOFARM CIRCULAR — Streamlit Cloud & Python Dependencies
 -r requirements.txt
