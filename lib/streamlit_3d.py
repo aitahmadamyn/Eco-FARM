@@ -1,16 +1,16 @@
 """
-ECOFARM CIRCULAR — Composant 3D WebGL Natif pour Streamlit Cloud
-Génère une page HTML/WebGL Three.js autonome ultra-performante et 100% embarquée
-(Aucun serveur externe requis -> Élimine définitivement toute erreur 403 Google).
+ECOFARM CIRCULAR — 3D WebGL Digital Twin Component for Streamlit Cloud & Standalone Embeds
+Fully self-contained Three.js viewer matching the exact architectural digital twin model.
 """
 
 def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
-    sand_temp = round(telemetry.get("sand_core_c", 445))
+    sand_temp = round(telemetry.get("sand_core_c", 428))
     sand_soc = round(telemetry.get("sand_soc", 78))
-    pyro_temp = round(telemetry.get("pyro_temp_c", 520)) if "pyro_temp_c" in telemetry else 520
-    solar_kw = round(telemetry.get("pv_kw", 41.2) + telemetry.get("st_kw", 28.4), 1)
+    solar_kw = round(telemetry.get("pv_kw", 41.2) + telemetry.get("st_kw", 20.5), 1)
+    pyro_kw = round(telemetry.get("syngas_kw", 107.8), 1)
+    biochar_rate = round(telemetry.get("biochar_kg_h", 25.4), 1)
     is_interlocked = telemetry.get("dryer_interlocked", False)
-    dryer_status_text = "INTERLOCKED (<180°C)" if is_interlocked else "ARMED & RUNNING (48.5 kW)"
+    dryer_status_text = "INTERLOCKED (<180°C)" if is_interlocked else "ARMED & RUNNING"
     dryer_status_color = "#f43f5e" if is_interlocked else "#22c55e"
 
     return f"""<!DOCTYPE html>
@@ -18,14 +18,14 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ECOFARM CIRCULAR 3D Digital Twin</title>
-    <!-- Bibliothèques Three.js et OrbitControls via CDNs publics fiables -->
+    <title>ECOFARM CIRCULAR — 3D Digital Twin</title>
+    <!-- Public CDN Three.js & OrbitControls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
-            background-color: #0b1120;
+            background-color: #0b111e;
             overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace, sans-serif;
             color: #f8fafc;
@@ -40,7 +40,7 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
             left: 0;
             touch-action: none;
         }}
-        /* En-tête HUD supérieur */
+        /* Top Header SCADA HUD */
         .hud-header {{
             position: absolute;
             top: 12px;
@@ -59,16 +59,43 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
             padding: 8px 16px;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
             pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }}
-        .badge-title h1 {{
+        .eco-logo {{
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: #34d399;
+            font-weight: 800;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }}
+        .title-text h1 {{
             font-size: 13px;
             font-weight: 700;
             letter-spacing: 1px;
-            color: #38bdf8;
+            color: #f8fafc;
             margin: 0;
-            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }}
-        .badge-title p {{
+        .version-tag {{
+            font-size: 9.5px;
+            background: rgba(16, 185, 129, 0.25);
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }}
+        .title-text p {{
             font-size: 10px;
             color: #94a3b8;
             margin: 2px 0 0 0;
@@ -79,8 +106,8 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
             pointer-events: auto;
         }}
         .stat-pill {{
-            background: rgba(15, 23, 42, 0.9);
-            border: 1px solid rgba(71, 85, 105, 0.6);
+            background: rgba(15, 23, 42, 0.92);
+            border: 1px solid rgba(71, 85, 105, 0.7);
             border-radius: 10px;
             padding: 6px 12px;
             font-size: 11px;
@@ -88,8 +115,9 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
             display: flex;
             align-items: center;
             gap: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }}
-        /* Barre d'outils flottante droite */
+        /* Right Floating Toolbar */
         .toolbar-right {{
             position: absolute;
             right: 14px;
@@ -103,7 +131,7 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
         .tool-btn {{
             width: 36px;
             height: 36px;
-            background: rgba(15, 23, 42, 0.9);
+            background: rgba(15, 23, 42, 0.92);
             border: 1px solid rgba(56, 189, 248, 0.35);
             color: #f8fafc;
             border-radius: 10px;
@@ -121,7 +149,7 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
             border-color: #38bdf8;
             transform: scale(1.05);
         }}
-        /* Dock inférieur de contrôle */
+        /* Bottom Control Dock */
         .dock-bottom {{
             position: absolute;
             bottom: 14px;
@@ -129,41 +157,123 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
             transform: translateX(-50%);
             background: rgba(15, 23, 42, 0.95);
             border: 1px solid rgba(71, 85, 105, 0.8);
-            border-radius: 16px;
-            padding: 8px 14px;
+            border-radius: 18px;
+            padding: 10px 14px;
             display: flex;
-            align-items: center;
+            flex-direction: column;
             gap: 8px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.7);
             z-index: 10;
-            max-width: 95vw;
-            overflow-x: auto;
+            max-width: 96vw;
         }}
-        .dock-group {{
+        .dock-subbar {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.8);
+            padding-bottom: 6px;
+        }}
+        .dock-tabs {{
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }}
+        .tab-btn {{
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid rgba(71, 85, 105, 0.6);
+            color: #cbd5e1;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }}
+        .tab-btn.active {{
+            background: #0284c7;
+            border-color: #38bdf8;
+            color: #ffffff;
+        }}
+        .speed-controls {{
             display: flex;
             align-items: center;
             gap: 4px;
-            border-right: 1px solid rgba(51, 65, 85, 0.8);
-            padding-right: 8px;
+            font-size: 11px;
+            font-family: monospace;
+            color: #94a3b8;
         }}
-        .dock-group:last-child {{
-            border-right: none;
-            padding-right: 0;
-        }}
-        .dock-btn {{
-            background: rgba(30, 41, 59, 0.8);
+        .speed-btn {{
+            background: rgba(30, 41, 59, 0.85);
             border: 1px solid rgba(71, 85, 105, 0.6);
             color: #cbd5e1;
-            padding: 6px 10px;
-            border-radius: 8px;
-            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 10.5px;
+            font-weight: 600;
             cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.15s;
         }}
-        .dock-btn:hover {{
-            background: #334155;
+        .speed-btn.active {{
+            background: #0284c7;
+            border-color: #38bdf8;
             color: #ffffff;
+        }}
+        .dock-cards {{
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow-x: auto;
+        }}
+        .nav-card {{
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(71, 85, 105, 0.6);
+            border-radius: 10px;
+            padding: 6px 12px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.15s;
+            min-width: 110px;
+        }}
+        .nav-card:hover {{
+            background: rgba(51, 65, 85, 0.8);
+            border-color: #94a3b8;
+        }}
+        .nav-card.active {{
+            background: rgba(2, 132, 199, 0.25);
+            border-color: #38bdf8;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+        }}
+        .nav-card-title {{
+            font-size: 11px;
+            font-weight: 700;
+            color: #f8fafc;
+        }}
+        .nav-card.active .nav-card-title {{
+            color: #38bdf8;
+        }}
+        .nav-card-sub {{
+            font-size: 9.5px;
+            color: #94a3b8;
+            margin-top: 1px;
+            white-space: nowrap;
+        }}
+        .nextjs-badge {{
+            position: absolute;
+            bottom: 14px;
+            left: 14px;
+            width: 34px;
+            height: 34px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(71, 85, 105, 0.8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 13px;
+            z-index: 10;
+            pointer-events: none;
         }}
         .dock-btn.active {{
             background: rgba(2, 132, 199, 0.35);
@@ -171,12 +281,12 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
             color: #38bdf8;
             font-weight: 600;
         }}
-        /* Carte d'information de zone inspectée */
+        /* Zone Info Card */
         #zone-card {{
             position: absolute;
-            top: 70px;
+            top: 76px;
             left: 14px;
-            width: 310px;
+            width: 320px;
             background: rgba(15, 23, 42, 0.96);
             border: 1px solid #38bdf8;
             border-radius: 14px;
@@ -184,11 +294,6 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
             box-shadow: 0 20px 40px rgba(0,0,0,0.8);
             z-index: 20;
             display: none;
-            animation: fadeIn 0.2s ease-out;
-        }}
-        @keyframes fadeIn {{
-            from {{ opacity: 0; transform: translateY(-8px); }}
-            to {{ opacity: 1; transform: translateY(0); }}
         }}
         .zone-card-header {{
             display: flex;
@@ -234,12 +339,10 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
             font-family: monospace;
             color: #cbd5e1;
         }}
-        .zone-specs div {{ margin-bottom: 3px; }}
-        .zone-specs div:last-child {{ margin-bottom: 0; }}
         /* Toast */
         #toast {{
             position: absolute;
-            top: 70px;
+            top: 72px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(15, 23, 42, 0.95);
@@ -261,20 +364,27 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
     <!-- HUD Header -->
     <div class="hud-header">
         <div class="badge-title">
-            <h1>ECOFARM CIRCULAR — Digital Twin</h1>
-            <p>Pyrolysis • Hybrid Sand Thermal Battery (45t) • Automated Drying</p>
+            <div class="eco-logo">ECO</div>
+            <div class="title-text">
+                <h1>ECOFARM CIRCULAR <span class="version-tag">PILOT PLANT v2.4</span></h1>
+                <p>Intelligent Biomass Pyrolysis • Hybrid Sand Thermal Battery • Automated Drying</p>
+            </div>
         </div>
         <div class="live-stats">
             <div class="stat-pill">
-                <span style="color: #f59e0b;">🔥 Sand:</span>
+                <span style="color: #f59e0b;">🔥 SAND CORE:</span>
                 <span style="font-weight: bold; color: #fbbf24;">{sand_temp}°C ({sand_soc}%)</span>
             </div>
             <div class="stat-pill">
-                <span style="color: #38bdf8;">☀️ Solar:</span>
-                <span style="font-weight: bold; color: #7dd3fc;">{solar_kw} kW</span>
+                <span style="color: #eab308;">☀️ SOLAR PV+TH:</span>
+                <span style="font-weight: bold; color: #fef08a;">{solar_kw} kW</span>
             </div>
             <div class="stat-pill">
-                <span style="color: {dryer_status_color};">⚡ Dryer:</span>
+                <span style="color: #ef4444;">⚡ PYROLYSIS FLUE:</span>
+                <span style="font-weight: bold; color: #fca5a5;">{pyro_kw} kW ({biochar_rate} kg/h C)</span>
+            </div>
+            <div class="stat-pill">
+                <span style="color: {dryer_status_color};">🛡️ DRYER:</span>
                 <span style="font-weight: bold; color: {dryer_status_color};">{dryer_status_text}</span>
             </div>
         </div>
@@ -283,7 +393,7 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
     <!-- Toast Notification -->
     <div id="toast">Action completed</div>
 
-    <!-- Zone Information Card (on 3D click/tap) -->
+    <!-- Zone Info Card -->
     <div id="zone-card">
         <div class="zone-card-header">
             <span class="zone-tag" id="zc-tag">ZONE D</span>
@@ -292,86 +402,179 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
         <div class="zone-title" id="zc-title">Hybrid Sand Thermal Battery</div>
         <div class="zone-desc" id="zc-desc">Zone engineering specifications...</div>
         <div class="zone-specs" id="zc-specs">
-            <div>• Core Temp: 445 °C</div>
+            <div>• Core Temp: 428 °C</div>
             <div>• Capacity: 1.25 MWh_th</div>
         </div>
     </div>
+
+    <!-- Next.js Bottom-Left Circular Badge -->
+    <div class="nextjs-badge">N</div>
 
     <!-- Floating Right Toolbar -->
     <div class="toolbar-right">
         <button class="tool-btn" onclick="zoomCam(-4)" title="Zoom In (+)">+</button>
         <button class="tool-btn" onclick="zoomCam(4)" title="Zoom Out (-)">−</button>
         <button class="tool-btn" onclick="setCameraPreset('iso')" title="Isometric 3/4 View">↺</button>
-        <button class="tool-btn" onclick="setCameraPreset('plan')" title="BIM Plan View (Top-Down)">📐</button>
-        <button class="tool-btn" onclick="toggleCutaway()" id="btn-cutaway-side" title="Cutaway X-Ray Mode">👁️</button>
+        <button class="tool-btn" onclick="showToast('Key [0/I] Isometric, [P] Plan, [1-6] Zones, [Space] Flow, [M] Cutaway')" title="Keyboard Shortcuts Guide">⌨</button>
     </div>
 
-    <!-- Bottom Navigation & Rendering Dock -->
+    <!-- Bottom Dock -->
     <div class="dock-bottom">
-        <div class="dock-group">
-            <button class="dock-btn active" id="btn-iso" onclick="setCameraPreset('iso')">Isometric 3/4</button>
-            <button class="dock-btn" id="btn-plan" onclick="setCameraPreset('plan')">BIM Plan</button>
+        <div class="dock-subbar">
+            <div class="dock-tabs">
+                <button class="tab-btn active" id="tab-cam">Camera Views</button>
+                <button class="tab-btn" id="tab-cutaway" onclick="toggleCutaway()">Render & Cutaway</button>
+                <button class="tab-btn" id="tab-sim" onclick="showToast('Thermodynamic Dispatch: 428°C Sand Core • 61.7 kW Solar PV+TH • 107.8 kW Syngas')">Thermodynamic Sim</button>
+            </div>
+            <div class="speed-controls">
+                <span>CIRCUITS:</span>
+                <button class="speed-btn" id="sp-0" onclick="setSpeed(0)">⏸</button>
+                <button class="speed-btn active" id="sp-1" onclick="setSpeed(1)">1x</button>
+                <button class="speed-btn" id="sp-2" onclick="setSpeed(2)">2x</button>
+                <button class="speed-btn" id="sp-5" onclick="setSpeed(5)">5x</button>
+            </div>
         </div>
-        <div class="dock-group">
-            <button class="dock-btn" onclick="setCameraPreset('zoneA')">Zone A (Biomass)</button>
-            <button class="dock-btn" onclick="setCameraPreset('zoneB')">Zone B (Dryer)</button>
-            <button class="dock-btn" onclick="setCameraPreset('zoneC')">Zone C (Pyrolysis)</button>
-            <button class="dock-btn" onclick="setCameraPreset('zoneD')">Zone D (Sand)</button>
-            <button class="dock-btn" onclick="setCameraPreset('zoneE')">Zone E (Solar)</button>
-            <button class="dock-btn" onclick="setCameraPreset('zoneF')">Zone F (SCADA)</button>
-        </div>
-        <div class="dock-group">
-            <button class="dock-btn" id="btn-cutaway" onclick="toggleCutaway()">Cutaway X-Ray</button>
-            <button class="dock-btn" id="btn-flow" onclick="toggleFlow()">Flow: Active</button>
+
+        <div class="dock-cards">
+            <button class="nav-card active" id="btn-iso" onclick="setCameraPreset('iso')">
+                <div class="nav-card-title">Isometric 3/4</div>
+                <div class="nav-card-sub">Full Facility</div>
+            </button>
+            <button class="nav-card" id="btn-plan" onclick="setCameraPreset('plan')">
+                <div class="nav-card-title">BIM Plan</div>
+                <div class="nav-card-sub">Top-Down Layout</div>
+            </button>
+            <button class="nav-card" id="btn-zoneA" onclick="setCameraPreset('zoneA')">
+                <div class="nav-card-title">Zone A</div>
+                <div class="nav-card-sub">Biomass Intake</div>
+            </button>
+            <button class="nav-card" id="btn-zoneB" onclick="setCameraPreset('zoneB')">
+                <div class="nav-card-title">Zone B</div>
+                <div class="nav-card-sub">Dryer System</div>
+            </button>
+            <button class="nav-card" id="btn-zoneC" onclick="setCameraPreset('zoneC')">
+                <div class="nav-card-title">Zone C</div>
+                <div class="nav-card-sub">Pyrolysis Unit</div>
+            </button>
+            <button class="nav-card" id="btn-zoneD" onclick="setCameraPreset('zoneD')">
+                <div class="nav-card-title">Zone D</div>
+                <div class="nav-card-sub">Sand Battery</div>
+            </button>
+            <button class="nav-card" id="btn-zoneE" onclick="setCameraPreset('zoneE')">
+                <div class="nav-card-title">Zone E</div>
+                <div class="nav-card-sub">Renewables</div>
+            </button>
+            <button class="nav-card" id="btn-zoneF" onclick="setCameraPreset('zoneF')">
+                <div class="nav-card-title">Zone F</div>
+                <div class="nav-card-sub">SCADA Control</div>
+            </button>
         </div>
     </div>
 
     <script>
-        // Full engineering specifications for the 6 functional zones
         const ZONES = {{
             zoneA: {{
                 tag: 'ZONE A',
-                title: 'Biomass Reception & Shredding',
+                title: 'Biomass Reception & Feed Intake',
                 desc: 'Inground receiving pit with safety grate, heavy-duty hammer mill, magnetic separator and 18° inclined belt conveyor.',
-                specs: '• Capacity: 120 kg/h\\n• Moisture: 45 %\\n• Shredder motor: 7.5 kW'
+                specs: '• Capacity: 120 kg/h\\n• Moisture: 45 %\\n• Motor power: 7.5 kW'
             }},
             zoneB: {{
                 tag: 'ZONE B',
                 title: 'Automated Continuous Tray Dryer',
-                desc: 'Modular insulated stainless steel tunnel with 3 perforated oscillating conveyor trays. Convective clean hot air supplied via sand battery heat exchanger.',
-                specs: '• Temperature: 85 °C\\n• Air flow: 4,200 m³/h\\n• Output moisture: 10.5 %'
+                desc: 'Continuous drying enclosure with 4 inspection portholes and horizontal rotary drum dryer with silver reinforcing bands.',
+                specs: '• Operating Temp: 85 °C\\n• Air circulation: 4,200 m³/h\\n• Output moisture: 10.5 %'
             }},
             zoneC: {{
                 tag: 'ZONE C',
-                title: 'Pyrolysis Unit & Biochar Retort',
-                desc: 'Sealed horizontal Inconel retort (520°C). Multi-cyclone separator, flameless thermal oxidizer and hermetic nitrogen-purged biochar drum station.',
-                specs: '• Bed Temp: 520 °C\\n• Biochar: 38.5 kg/h (C > 82%)\\n• Syngas Recovery: 62 kW_th'
+                title: 'Industrial Pyrolysis Retort & Cyclone',
+                desc: 'Continuous double-walled Inconel retort at 520°C, cyclone separator, tall vertical stack and syngas flue recovery duct.',
+                specs: '• Bed Temp: 520 °C\\n• Biochar Yield: 25.4 kg/h C\\n• Flue Recovery: 107.8 kW'
             }},
             zoneD: {{
                 tag: 'ZONE D',
-                title: 'Hybrid Sand Thermal Battery (Hero)',
-                desc: 'Insulated vessel with 45 t of refractory quartz sand (up to 500°C). 3 hybrid charging vectors: Solar thermal, pyrolysis syngas recovery, and PV surplus immersion heaters.',
-                specs: '• Core Temp: {sand_temp} °C\\n• Capacity: 1.25 MWh_th\\n• Dryer discharge: 48.5 kW_th'
+                title: 'Hybrid Sand Thermal Battery (Hero Vessel)',
+                desc: '45-ton refractory quartz sand battery vessel with horizontal reinforcing bands, ventilated mushroom dome cap, and yellow thermal loop.',
+                specs: '• Core Temp: {sand_temp} °C\\n• Thermal SOC: {sand_soc} %\\n• Storage: 1.25 MWh_th'
             }},
             zoneE: {{
                 tag: 'ZONE E',
-                title: 'Solar PV & Thermal Integration',
-                desc: 'Steel canopy supporting 16 bifacial PV modules (50 kWp) and 40 m² evacuated tube solar collectors. 60 kWh LFP BESS battery.',
-                specs: '• PV Power: 41.2 kW\\n• Solar Thermal: 28.4 kW\\n• Surplus to sand: 26.8 kW'
+                title: 'Renewables (Solar PV & Evacuated Tube Collectors)',
+                desc: '8 tilted bifacial PV modules (50 kWp) and parallel evacuated glass tube solar thermal collector rack.',
+                specs: '• Solar Output: {solar_kw} kW\\n• Fluid Temp: 92 °C\\n• Array Tilt: 28°'
             }},
             zoneF: {{
                 tag: 'ZONE F',
-                title: 'SCADA Control Room & AI Gateway',
-                desc: 'Operator control cabin with panoramic glazing, redundant Siemens S7-1500 PLCs, triple-screen HMI station, and Gemini AI optimization gateway.',
-                specs: '• Automation: Siemens S7-1500\\n• Scan cycle: 20 ms\\n• Overall COP: 3.8x'
+                title: 'SCADA Control Cabin & Utility Facility',
+                desc: 'Central control building with yellow roof safety handrails, exhaust duct, red warning beacon, and panoramic operator window.',
+                specs: '• PLC System: Siemens S7-1500\\n• Scan Cycle: 20 ms\\n• Overall COP: 3.8x'
             }}
         }};
 
-        // INITIALISATION THREE.JS
+        // Procedural Textures
+        function createGridTexture() {{
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#64748b';
+            ctx.fillRect(0, 0, 512, 512);
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(2, 2, 508, 508);
+            ctx.beginPath();
+            ctx.moveTo(256, 0); ctx.lineTo(256, 512);
+            ctx.moveTo(0, 256); ctx.lineTo(512, 256);
+            ctx.stroke();
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }}
+
+        function createHazardTexture() {{
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#eab308';
+            ctx.fillRect(0, 0, 256, 256);
+            ctx.fillStyle = '#0f172a';
+            const w = 32;
+            for (let x = -256; x < 512; x += w * 2) {{
+                ctx.beginPath();
+                ctx.moveTo(x, 0); ctx.lineTo(x + w, 0);
+                ctx.lineTo(x + w + 256, 256); ctx.lineTo(x + 256, 256);
+                ctx.fill();
+            }}
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }}
+
+        function createSolarTexture() {{
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, 512, 512);
+            for (let c = 0; c < 4; c++) {{
+                for (let r = 0; r < 6; r++) {{
+                    const x = c * 128 + 2, y = r * 85 + 2;
+                    ctx.fillStyle = '#1e3a8a';
+                    ctx.fillRect(x, y, 124, 81);
+                    ctx.strokeStyle = '#94a3b8';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, 124, 81);
+                }}
+            }}
+            return new THREE.CanvasTexture(canvas);
+        }}
+
+        // THREE.JS SCENE SETUP
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0f172a);
-        scene.fog = new THREE.FogExp2(0x0f172a, 0.015);
+        scene.background = new THREE.Color(0x0b111e);
+        scene.fog = new THREE.FogExp2(0x0b111e, 0.015);
 
         const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.5, 300);
         camera.position.set(22, 17, 24);
@@ -382,7 +585,7 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.2;
+        renderer.toneMappingExposure = 1.15;
         container.appendChild(renderer.domElement);
 
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -393,12 +596,12 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
         controls.minDistance = 5;
         controls.maxDistance = 75;
 
-        // ÉCLAIRAGE INDUSTRIEL
-        const hemiLight = new THREE.HemisphereLight(0x93c5fd, 0x1e293b, 1.2);
+        // LIGHTING RIG
+        const hemiLight = new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 1.4);
         hemiLight.position.set(0, 30, 0);
         scene.add(hemiLight);
 
-        const sunLight = new THREE.DirectionalLight(0xffedd5, 2.2);
+        const sunLight = new THREE.DirectionalLight(0xffedd5, 2.4);
         sunLight.position.set(24, 28, 20);
         sunLight.castShadow = true;
         sunLight.shadow.mapSize.width = 2048;
@@ -412,19 +615,25 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
         rimLight.position.set(-20, 16, -18);
         scene.add(rimLight);
 
-        // MATÉRIAUX PBR
+        // MATERIALS
+        const gridTex = createGridTexture();
+        gridTex.repeat.set(9, 6);
+        const hazardTex = createHazardTexture();
+        const solarTex = createSolarTexture();
+
         const matSteel = new THREE.MeshStandardMaterial({{ color: 0x94a3b8, metalness: 0.85, roughness: 0.35 }});
         const matDarkSteel = new THREE.MeshStandardMaterial({{ color: 0x334155, metalness: 0.8, roughness: 0.4 }});
         const matStainless = new THREE.MeshStandardMaterial({{ color: 0xe2e8f0, metalness: 0.95, roughness: 0.18 }});
-        const matSafetyYellow = new THREE.MeshStandardMaterial({{ color: 0xeab308, metalness: 0.3, roughness: 0.4 }});
-        const matConcrete = new THREE.MeshStandardMaterial({{ color: 0x64748b, roughness: 0.9, metalness: 0.1 }});
-        const matGlass = new THREE.MeshPhysicalMaterial({{ color: 0xbae6fd, transmission: 0.85, transparent: true, opacity: 0.4, roughness: 0.1 }});
+        const matSafetyYellow = new THREE.MeshStandardMaterial({{ color: 0xeab308, metalness: 0.35, roughness: 0.35 }});
+        const matGreen = new THREE.MeshStandardMaterial({{ color: 0x15803d, metalness: 0.45, roughness: 0.4 }});
+        const matEquipmentBlue = new THREE.MeshStandardMaterial({{ color: 0x0284c7, metalness: 0.55, roughness: 0.35 }});
+        const matConcrete = new THREE.MeshStandardMaterial({{ map: gridTex, roughness: 0.85, metalness: 0.08 }});
+        const matSolar = new THREE.MeshStandardMaterial({{ map: solarTex, metalness: 0.9, roughness: 0.2 }});
+        const matGlass = new THREE.MeshPhysicalMaterial({{ color: 0xbae6fd, transmission: 0.85, transparent: true, opacity: 0.45, roughness: 0.1 }});
         const matSand = new THREE.MeshStandardMaterial({{ color: 0xf59e0b, roughness: 0.95, metalness: 0.05 }});
-        const matBiochar = new THREE.MeshStandardMaterial({{ color: 0x18181b, roughness: 0.9, metalness: 0.1 }});
-        const matSolarBlue = new THREE.MeshStandardMaterial({{ color: 0x1e3a8a, metalness: 0.9, roughness: 0.2 }});
-        const matEquipmentBlue = new THREE.MeshStandardMaterial({{ color: 0x0284c7, metalness: 0.5, roughness: 0.35 }});
+        const matVacuumTube = new THREE.MeshPhysicalMaterial({{ color: 0x1d4ed8, transmission: 0.7, transparent: true, opacity: 0.85, roughness: 0.15 }});
+        const matWhiteFunnel = new THREE.MeshStandardMaterial({{ color: 0xf8fafc, roughness: 0.25, metalness: 0.1 }});
 
-        // Structures d'état
         const cutawayHulls = [];
         const rotatingParts = [];
         const raycastObjects = [];
@@ -434,209 +643,449 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
             raycastObjects.push(mesh);
         }}
 
-        // 1. FONDATION BÉTON PLATELAGE
+        // 1. CONCRETE SLAB & PERIMETER
         const slab = new THREE.Mesh(new THREE.BoxGeometry(38, 0.6, 26), matConcrete);
         slab.position.y = -0.3;
         slab.receiveShadow = true;
         scene.add(slab);
 
-        // 2. ZONE A — RÉCEPTION & BROYAGE
-        const zA_x = -13, zA_z = 5;
-        const bunker = new THREE.Mesh(new THREE.BoxGeometry(3.6, 1.2, 3.2), matDarkSteel);
-        bunker.position.set(zA_x - 1.2, 0.6, zA_z + 0.8);
-        bunker.castShadow = true;
+        // Raised concrete foundation plinths
+        const processPlinth = new THREE.Mesh(new THREE.BoxGeometry(22, 0.16, 5.2), matConcrete);
+        processPlinth.position.set(3.5, 0.08, -1.2);
+        processPlinth.receiveShadow = true;
+        scene.add(processPlinth);
+
+        const solarPlinth = new THREE.Mesh(new THREE.BoxGeometry(9.0, 0.16, 5.2), matConcrete);
+        solarPlinth.position.set(1.5, 0.08, 3.8);
+        solarPlinth.receiveShadow = true;
+        scene.add(solarPlinth);
+
+        // Hazard Curbs
+        const frontCurbTex = hazardTex.clone();
+        frontCurbTex.repeat.set(24, 1);
+        const frontCurb = new THREE.Mesh(new THREE.BoxGeometry(38, 0.12, 0.5), new THREE.MeshStandardMaterial({{ map: frontCurbTex, roughness: 0.5 }}));
+        frontCurb.position.set(0, 0.06, 12.75);
+        scene.add(frontCurb);
+
+        const leftCurbTex = hazardTex.clone();
+        leftCurbTex.repeat.set(1, 16);
+        const leftCurb = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 26), new THREE.MeshStandardMaterial({{ map: leftCurbTex, roughness: 0.5 }}));
+        leftCurb.position.set(-18.75, 0.06, 0);
+        scene.add(leftCurb);
+
+        // Safety Bollards
+        [[-17, 12.5], [-12, 12.5], [-7, 12.5], [-2, 12.5], [3, 12.5], [8, 12.5], [13, 12.5], [17, 12.5],
+         [-18.5, 8], [-18.5, 3], [-18.5, -2], [-18.5, -7], [-18.5, -11], [17.5, -5], [17.5, 5]
+        ].forEach(([bx, bz]) => {{
+            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.9, 12), matSafetyYellow);
+            post.position.set(bx, 0.45, bz);
+            scene.add(post);
+        }});
+
+        // Floodlight Tower (Back-Left)
+        const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 7.5, 12), matSteel);
+        mast.position.set(-17.5, 3.75, 11);
+        scene.add(mast);
+        const lum = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.12, 0.45), matDarkSteel);
+        lum.position.set(-16.5, 7.4, 10.3);
+        lum.rotation.z = -0.3;
+        scene.add(lum);
+
+        // 2. ZONE A — BIOMASS INTAKE & CONVEYOR
+        const zA_x = -13, zA_z = 4.5;
+        const bunker = new THREE.Mesh(new THREE.BoxGeometry(3.6, 1.1, 3.2), matDarkSteel);
+        bunker.position.set(zA_x - 1.2, 0.55, zA_z + 0.8);
         tagMesh(bunker, 'zoneA');
         scene.add(bunker);
 
-        const shredder = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.5, 1.6), matSafetyYellow);
-        shredder.position.set(zA_x + 1.6, 1.0, zA_z + 0.8);
-        shredder.castShadow = true;
+        const bioMound = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.35, 0.25, 20), new THREE.MeshStandardMaterial({{ color: 0xb45309, roughness: 0.95 }}));
+        bioMound.position.set(zA_x - 1.2, 1.15, zA_z + 0.8);
+        scene.add(bioMound);
+
+        const shredder = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.5, 1.6), matGreen);
+        shredder.position.set(zA_x + 1.6, 0.9, zA_z + 0.8);
         tagMesh(shredder, 'zoneA');
         scene.add(shredder);
 
-        // Convoyeur incliné
-        const convStart = new THREE.Vector3(zA_x + 2.0, 0.6, zA_z + 0.8);
-        const convEnd = new THREE.Vector3(-7.5, 3.4, -0.8);
-        const convLen = convStart.distanceTo(convEnd);
-        const convBeam = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.2, convLen), matSteel);
-        const convMid = new THREE.Vector3().addVectors(convStart, convEnd).multiplyScalar(0.5);
-        convBeam.position.copy(convMid);
-        convBeam.lookAt(convEnd);
-        tagMesh(convBeam, 'zoneA');
-        scene.add(convBeam);
+        const infeedHopper = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.45, 0.8, 4, 1, false, Math.PI / 4), matSafetyYellow);
+        infeedHopper.position.set(zA_x + 1.6, 2.0, zA_z + 0.8);
+        tagMesh(infeedHopper, 'zoneA');
+        scene.add(infeedHopper);
 
-        // 3. ZONE B — SÉCHOIR CONTINU
-        const zB_x = -6.5, zB_z = -1.8;
-        const dryerHousing = new THREE.Mesh(new THREE.BoxGeometry(4.6, 2.4, 2.2), matEquipmentBlue);
+        const shredderMotor = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.6, 16), matSafetyYellow);
+        shredderMotor.rotation.z = Math.PI / 2;
+        shredderMotor.position.set(zA_x + 2.7, 0.6, zA_z + 0.8);
+        scene.add(shredderMotor);
+
+        // Inclined Belt Conveyor
+        const convStart = new THREE.Vector3(zA_x + 2.0, 0.8, zA_z + 0.8);
+        const convEnd = new THREE.Vector3(-4.6, 2.75, -1.8);
+        const convLen = convStart.distanceTo(convEnd);
+        const convMid = new THREE.Vector3().addVectors(convStart, convEnd).multiplyScalar(0.5);
+
+        const convTruss = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.25, convLen), matSafetyYellow);
+        convTruss.position.copy(convMid);
+        convTruss.lookAt(convEnd);
+        tagMesh(convTruss, 'zoneA');
+        scene.add(convTruss);
+
+        const convBelt = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.05, convLen - 0.1), matDarkSteel);
+        convBelt.position.copy(convMid);
+        convBelt.position.y += 0.14;
+        convBelt.lookAt(convEnd);
+        scene.add(convBelt);
+
+        const convLeg1 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.2, 8), matSteel);
+        convLeg1.position.set(zA_x + 5.2, 1.1, zA_z - 0.5);
+        scene.add(convLeg1);
+
+        // White inverted conical reception funnel hopper atop dryer housing
+        const elevatedHopper = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.42, 1.1, 24), matWhiteFunnel);
+        elevatedHopper.position.set(-4.6, 3.25, -1.8);
+        tagMesh(elevatedHopper, 'zoneA');
+        scene.add(elevatedHopper);
+
+        // Stainless exhaust chimney with conical rain cap on dryer roof
+        const dryerChimney = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 1.5, 16), matStainless);
+        dryerChimney.position.set(-3.2, 3.4, -1.8);
+        scene.add(dryerChimney);
+
+        const dryerCap = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.22, 16), matStainless);
+        dryerCap.position.set(-3.2, 4.25, -1.8);
+        scene.add(dryerCap);
+
+        // 3. ZONE B — CONTINUOUS TRAY DRYER
+        const zB_x = -3.5, zB_z = -1.8;
+        const dryerHousing = new THREE.Mesh(new THREE.BoxGeometry(4.8, 2.3, 2.2), matEquipmentBlue);
         dryerHousing.position.set(zB_x, 1.5, zB_z);
-        dryerHousing.castShadow = true;
         tagMesh(dryerHousing, 'zoneB');
         cutawayHulls.push(dryerHousing);
         scene.add(dryerHousing);
 
-        // Plateaux internes (visibles en écorché)
-        for (let t = 0; t < 3; t++) {{
-            const tray = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.06, 1.8), matStainless);
-            tray.position.set(zB_x, 0.8 + t * 0.6, zB_z);
-            scene.add(tray);
+        // 4 Round Observation Portholes
+        for (let p = 0; p < 4; p++) {{
+            const port = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.08, 16), matGlass);
+            port.rotation.x = Math.PI / 2;
+            port.position.set(zB_x - 1.5 + p * 1.0, 1.6, zB_z + 1.12);
+            scene.add(port);
+            const bezel = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.03, 8, 16), matStainless);
+            bezel.position.set(zB_x - 1.5 + p * 1.0, 1.6, zB_z + 1.14);
+            scene.add(bezel);
         }}
 
-        // Ventilateur centrifuge
-        const fan = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.45, 16), matDarkSteel);
-        fan.rotation.z = Math.PI / 2;
-        fan.position.set(zB_x + 2.7, 2.7, zB_z);
-        tagMesh(fan, 'zoneB');
-        scene.add(fan);
+        // Green blower motor
+        const blower = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.5, 16), matGreen);
+        blower.rotation.z = Math.PI / 2;
+        blower.position.set(zB_x + 2.7, 1.5, zB_z);
+        tagMesh(blower, 'zoneB');
+        scene.add(blower);
 
-        // Cheminée d'évacuation buées
-        const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 2.2, 16), matStainless);
-        exhaust.position.set(zB_x - 1.6, 3.2, zB_z);
-        scene.add(exhaust);
+        // Rotary Drum Dryer with Silver Rings
+        const drumX = 2.4, drumZ = -0.5, drumR = 0.85, drumL = 4.2;
+        const drum = new THREE.Mesh(new THREE.CylinderGeometry(drumR, drumR, drumL, 24), matDarkSteel);
+        drum.rotation.z = Math.PI / 2;
+        drum.position.set(drumX, 1.5, drumZ);
+        tagMesh(drum, 'zoneB');
+        cutawayHulls.push(drum);
+        scene.add(drum);
 
-        // 4. ZONE C — PYROLYSE & BIOCHAR
-        const zC_x = 1.5, zC_z = -1.8;
-        const retort = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 4.2, 24), matDarkSteel);
-        retort.rotation.z = Math.PI / 2;
-        retort.position.set(zC_x, 1.7, zC_z);
-        retort.castShadow = true;
+        for (let r = 0; r < 6; r++) {{
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(drumR + 0.02, 0.04, 8, 24), matStainless);
+            ring.rotation.y = Math.PI / 2;
+            ring.position.set(drumX - 1.8 + r * 0.72, 1.5, drumZ);
+            scene.add(ring);
+        }}
+
+        // Elevated Operator Catwalk with Yellow Safety Railing
+        const catwalkDeck = new THREE.Mesh(new THREE.BoxGeometry(11.0, 0.08, 0.9), matSteel);
+        catwalkDeck.position.set(-0.3, 1.35, -2.9);
+        scene.add(catwalkDeck);
+
+        for (let s = 0; s < 7; s++) {{
+            const st = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.35, 8), matSteel);
+            st.position.set(-5.4 + s * 1.7, 0.675, -2.9);
+            scene.add(st);
+        }}
+
+        const railTop = new THREE.Mesh(new THREE.BoxGeometry(11.0, 0.05, 0.05), matSafetyYellow);
+        railTop.position.set(-0.3, 2.45, -3.32);
+        scene.add(railTop);
+
+        const railMid = new THREE.Mesh(new THREE.BoxGeometry(11.0, 0.03, 0.03), matSafetyYellow);
+        railMid.position.set(-0.3, 1.9, -3.32);
+        scene.add(railMid);
+
+        for (let rp = 0; rp < 8; rp++) {{
+            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.1, 8), matSafetyYellow);
+            post.position.set(-5.4 + rp * 1.54, 1.9, -3.32);
+            scene.add(post);
+        }}
+
+        // Dual Light-Blue Process Loops
+        const blueLoop1 = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(3.6, 1.4, -1.2),
+            new THREE.Vector3(2.2, 2.1, -4.0),
+            new THREE.Vector3(-1.2, 2.1, -4.0),
+            new THREE.Vector3(-3.6, 1.3, -2.6)
+        ]);
+        scene.add(new THREE.Mesh(new THREE.TubeGeometry(blueLoop1, 32, 0.07, 8, false), new THREE.MeshStandardMaterial({{ color: 0x38bdf8, metalness: 0.8, roughness: 0.25 }})));
+
+        const blueLoop2 = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(3.8, 1.1, -1.2),
+            new THREE.Vector3(2.4, 1.8, -4.3),
+            new THREE.Vector3(-1.0, 1.8, -4.3),
+            new THREE.Vector3(-3.6, 1.0, -2.6)
+        ]);
+        scene.add(new THREE.Mesh(new THREE.TubeGeometry(blueLoop2, 32, 0.07, 8, false), new THREE.MeshStandardMaterial({{ color: 0x38bdf8, metalness: 0.8, roughness: 0.25 }})));
+
+        // 4. ZONE C — INDUSTRIAL PYROLYSIS & BIOCHAR
+        const zC_x = 5.6, zC_z = -1.8;
+        const retort = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, 2.8, 20), matDarkSteel);
+        retort.position.set(zC_x, 1.8, zC_z);
         tagMesh(retort, 'zoneC');
         cutawayHulls.push(retort);
         scene.add(retort);
 
-        // Vis interne
-        const auger = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 4.0, 16), matStainless);
-        auger.rotation.z = Math.PI / 2;
-        auger.position.set(zC_x, 1.7, zC_z);
-        scene.add(auger);
-        rotatingParts.push({{ obj: auger, axis: 'x', speed: 2 }});
-
-        // Cyclone
-        const cyclone = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.4, 16), matStainless);
-        cyclone.position.set(zC_x + 1.2, 2.8, zC_z - 1.0);
+        const cyclone = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.0, 16), matStainless);
+        cyclone.position.set(zC_x + 0.8, 2.8, zC_z - 0.8);
         tagMesh(cyclone, 'zoneC');
         scene.add(cyclone);
 
-        // Oxydateur thermique sans flamme
-        const oxidizer = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 1.8, 16), matDarkSteel);
-        oxidizer.position.set(zC_x + 2.4, 2.4, zC_z - 0.8);
-        tagMesh(oxidizer, 'zoneC');
-        scene.add(oxidizer);
+        const chimney = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.18, 5.5, 16), matStainless);
+        chimney.position.set(zC_x + 0.8, 4.2, zC_z - 0.8);
+        scene.add(chimney);
 
-        // Fût Biochar
-        const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.9, 16), matBiochar);
-        drum.position.set(zC_x + 2.2, 0.6, zC_z + 1.4);
-        tagMesh(drum, 'zoneC');
-        scene.add(drum);
+        const biocharDrum = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.9, 16), new THREE.MeshStandardMaterial({{ color: 0x18181b, roughness: 0.9 }}));
+        biocharDrum.position.set(zC_x + 0.8, 0.55, zC_z + 1.2);
+        tagMesh(biocharDrum, 'zoneC');
+        scene.add(biocharDrum);
 
-        // 5. ZONE D — BATTERIE THERMIQUE À SABLE (HERO)
-        const zD_x = 10.5, zD_z = -1.8;
-        const sandVessel = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.0, 4.8, 32), matStainless);
-        sandVessel.position.set(zD_x, 2.8, zD_z);
-        sandVessel.castShadow = true;
+        // 5. ZONE D — HYBRID SAND THERMAL BATTERY (HERO VESSEL)
+        const zD_x = 11.2, zD_z = -0.5, vR = 2.1, vH = 4.5;
+        const sandVessel = new THREE.Mesh(new THREE.CylinderGeometry(vR, vR, vH, 32), matStainless);
+        sandVessel.position.set(zD_x, vH / 2, zD_z);
         tagMesh(sandVessel, 'zoneD');
         cutawayHulls.push(sandVessel);
         scene.add(sandVessel);
 
-        // Dôme cuve
-        const dome = new THREE.Mesh(new THREE.SphereGeometry(2.0, 32, 16, 0, Math.PI * 2, 0, Math.PI / 4), matStainless);
-        dome.position.set(zD_x, 4.8, zD_z);
-        cutawayHulls.push(dome);
-        scene.add(dome);
+        // Silo horizontal ring bands
+        for (let k = 1; k <= 4; k++) {{
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(vR + 0.03, 0.035, 8, 32), matStainless);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.set(zD_x, k * 0.9, zD_z);
+            scene.add(ring);
+        }}
 
-        // Cœur de sable interne
-        const sandCore = new THREE.Mesh(new THREE.CylinderGeometry(1.85, 1.85, 4.4, 24), matSand);
-        sandCore.position.set(zD_x, 2.8, zD_z);
+        // Silo Top Flat Cap
+        const topCap = new THREE.Mesh(new THREE.CylinderGeometry(vR + 0.05, vR + 0.05, 0.12, 32), matStainless);
+        topCap.position.set(zD_x, vH, zD_z);
+        scene.add(topCap);
+
+        // Silo neck collar supporting mushroom dome cap
+        const siloNeck = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.45, 24), matStainless);
+        siloNeck.position.set(zD_x, vH + 0.22, zD_z);
+        scene.add(siloNeck);
+
+        // Vertical conduit pipe down front face of silo
+        const siloConduit = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, vH, 12), matStainless);
+        siloConduit.position.set(zD_x, vH / 2, zD_z + vR + 0.06);
+        scene.add(siloConduit);
+
+        // Spacer struts supporting dome
+        for (let s = 0; s < 6; s++) {{
+            const a = (s * Math.PI * 2) / 6;
+            const spacer = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.45, 8), matSteel);
+            spacer.position.set(zD_x + Math.cos(a) * (vR * 0.8), vH + 0.22, zD_z + Math.sin(a) * (vR * 0.8));
+            scene.add(spacer);
+        }}
+
+        // Umbrella/mushroom dome cap with open air gap underneath
+        const siloDome = new THREE.Mesh(new THREE.SphereGeometry(vR + 0.15, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.48), matStainless);
+        siloDome.position.set(zD_x, vH + 0.44, zD_z);
+        cutawayHulls.push(siloDome);
+        scene.add(siloDome);
+
+        // Internal sand core
+        const sandCore = new THREE.Mesh(new THREE.CylinderGeometry(vR - 0.2, vR - 0.2, vH - 0.4, 24), matSand);
+        sandCore.position.set(zD_x, vH / 2, zD_z);
         tagMesh(sandCore, 'zoneD');
         scene.add(sandCore);
 
-        // Thermoplongeurs Incoloy (submergés)
-        const heaterMat = new THREE.MeshStandardMaterial({{ color: 0xef4444, emissive: 0xb91c1c, emissiveIntensity: 0.6 }});
-        for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) {{
-            const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 3.8, 8), heaterMat);
-            rod.position.set(zD_x + Math.cos(a) * 0.5, 2.8, zD_z + Math.sin(a) * 0.5);
-            scene.add(rod);
-        }}
+        // 6. ZONE E — RENEWABLES (SOLAR PV & SOLAR THERMAL EVACUATED TUBES)
+        const zE_x = 0.5, zE_z = 3.6;
 
-        // Pompes et vase d'expansion
-        const pump = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.2, 1.8), matDarkSteel);
-        pump.position.set(zD_x - 2.8, 0.5, zD_z);
-        scene.add(pump);
-
-        // 6. ZONE E — SOLAIRE PV & THERMIQUE
-        const zE_x = 6.5, zE_z = 6.5;
-        // Piliers canopée
-        [[-4.5, -2.5], [4.5, -2.5], [-4.5, 2.5], [4.5, 2.5]].forEach(([cx, cz]) => {{
-            const col = new THREE.Mesh(new THREE.BoxGeometry(0.18, 3.6, 0.18), matSteel);
-            col.position.set(zE_x + cx, 1.8, zE_z + cz);
-            scene.add(col);
-        }});
-
-        // Panneaux solaires (4x3)
+        // 8 tilted solar PV panels
         for (let c = 0; c < 4; c++) {{
-            for (let r = 0; r < 3; r++) {{
-                const panel = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.05, 1.0), matSolarBlue);
-                panel.position.set(zE_x - 2.8 + c * 1.5, 3.8 - (r - 1) * 0.28, zE_z - 1.0 + r * 1.1);
-                panel.rotation.x = 0.26;
-                tagMesh(panel, 'zoneE');
-                scene.add(panel);
+            for (let r = 0; r < 2; r++) {{
+                const pnl = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.04, 1.1), matSolar);
+                pnl.position.set(zE_x - 2.25 + c * 1.5, 1.7 - r * 0.55, zE_z - 0.6 + r * 1.05);
+                pnl.rotation.x = 0.48;
+                tagMesh(pnl, 'zoneE');
+                scene.add(pnl);
             }}
         }}
 
-        // Onduleur et conteneur BESS
-        const inverter = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.8, 0.7), matSafetyYellow);
-        inverter.position.set(zE_x - 3.2, 1.15, zE_z - 2.4);
-        tagMesh(inverter, 'zoneE');
-        scene.add(inverter);
+        // Solar balance of plant cabinets (dark steel inverter & green cabinet)
+        const inverterCab = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.5, 0.9), matDarkSteel);
+        inverterCab.position.set(zE_x + 1.2, 0.75, zE_z - 0.5);
+        scene.add(inverterCab);
 
-        const bess = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.9, 1.1), matDarkSteel);
-        bess.position.set(zE_x - 1.0, 1.2, zE_z - 2.4);
-        tagMesh(bess, 'zoneE');
-        scene.add(bess);
+        const greenCab = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.3, 0.8), matGreen);
+        greenCab.position.set(zE_x + 2.5, 0.65, zE_z - 0.5);
+        scene.add(greenCab);
 
-        // 7. ZONE F — SALLE DE COMMANDE SCADA
-        const zF_x = -12.5, zF_z = -7.5;
-        const cabin = new THREE.Mesh(new THREE.BoxGeometry(7.0, 3.0, 4.6), matDarkSteel);
-        cabin.position.set(zF_x, 1.8, zF_z);
+        const vertYellowConduit = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 2.4, 8), matSafetyYellow);
+        vertYellowConduit.position.set(zE_x + 2.0, 1.2, zE_z - 0.1);
+        scene.add(vertYellowConduit);
+
+        // Solar Thermal Evacuated Tube Collector Array
+        const st_x = zE_x + 4.2, st_z = zE_z + 1.2;
+        const manifold = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 2.6, 16), matStainless);
+        manifold.rotation.z = Math.PI / 2;
+        manifold.position.set(st_x, 1.8, st_z - 1.0);
+        scene.add(manifold);
+
+        const stFrame = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.08, 1.8), matDarkSteel);
+        stFrame.position.set(st_x, 1.1, st_z);
+        stFrame.rotation.x = 0.52;
+        scene.add(stFrame);
+
+        for (let tb = 0; tb < 14; tb++) {{
+            const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1.7, 12), matVacuumTube);
+            tube.position.set(st_x - 1.2 + tb * 0.185, 1.15, st_z);
+            tube.rotation.x = 0.52;
+            tagMesh(tube, 'zoneE');
+            scene.add(tube);
+        }}
+
+        // Pipe Rack Canopy Frame
+        [ [zE_x - 4.5, zE_z + 2.5], [zE_x + 4.5, zE_z + 2.5], [zE_x + 6.5, zE_z + 2.5] ].forEach(([px, pz]) => {{
+            const col = new THREE.Mesh(new THREE.BoxGeometry(0.14, 3.4, 0.14), matSteel);
+            col.position.set(px, 1.7, pz);
+            scene.add(col);
+        }});
+        const crossBeam = new THREE.Mesh(new THREE.BoxGeometry(11.5, 0.14, 0.14), matSteel);
+        crossBeam.position.set(zE_x + 1.0, 3.4, zE_z + 2.5);
+        scene.add(crossBeam);
+
+        // 7. ZONE F — SCADA CONTROL CABIN & UTILITY FACILITY
+        const zF_x = -10.5, zF_z = -5.8;
+        const cabin = new THREE.Mesh(new THREE.BoxGeometry(7.0, 3.2, 4.6), matDarkSteel);
+        cabin.position.set(zF_x, 1.6, zF_z);
         tagMesh(cabin, 'zoneF');
         scene.add(cabin);
 
-        const cabinWin = new THREE.Mesh(new THREE.BoxGeometry(5.2, 1.6, 0.08), matGlass);
+        const cabinRoof = new THREE.Mesh(new THREE.BoxGeometry(7.4, 0.25, 5.0), matSteel);
+        cabinRoof.position.set(zF_x, 3.3, zF_z);
+        scene.add(cabinRoof);
+
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.05, 0.05), matSafetyYellow);
+        rail.position.set(zF_x, 3.8, zF_z + 2.4);
+        scene.add(rail);
+
+        const cabinWin = new THREE.Mesh(new THREE.BoxGeometry(5.4, 1.4, 0.06), matGlass);
         cabinWin.position.set(zF_x, 1.8, zF_z + 2.32);
         scene.add(cabinWin);
 
-        // 8. CIRCUITS FLUIDIQUES & PARTICULES ANIMÉES
-        function createPipe(curve, color, rad = 0.08) {{
-            const geo = new THREE.TubeGeometry(curve, 24, rad, 8, false);
+        // Red Warning Beacon
+        const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), new THREE.MeshStandardMaterial({{ color: 0xef4444, emissive: 0xff0000, emissiveIntensity: 0.9 }}));
+        beacon.position.set(zF_x - 0.8, 4.65, zF_z + 1.2);
+        scene.add(beacon);
+
+        // Industrial 3-Tier Status Indicator Tower (Green / Amber / Red stack light)
+        const stackPole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.8, 8), matDarkSteel);
+        stackPole.position.set(zF_x - 3.4, 4.2, zF_z + 2.3);
+        scene.add(stackPole);
+
+        const lightRed = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.12, 12), new THREE.MeshStandardMaterial({{ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.5 }}));
+        lightRed.position.set(zF_x - 3.4, 4.65, zF_z + 2.3);
+        scene.add(lightRed);
+
+        const lightAmber = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.12, 12), new THREE.MeshStandardMaterial({{ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.5 }}));
+        lightAmber.position.set(zF_x - 3.4, 4.79, zF_z + 2.3);
+        scene.add(lightAmber);
+
+        const lightGreen = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.12, 12), new THREE.MeshStandardMaterial({{ color: 0x22c55e, emissive: 0x22c55e, emissiveIntensity: 0.9 }}));
+        lightGreen.position.set(zF_x - 3.4, 4.93, zF_z + 2.3);
+        scene.add(lightGreen);
+
+        // Plate Heat Exchanger (PHE) between Sand Battery and Dryer
+        const hexGroup = new THREE.Group();
+        hexGroup.position.set(7.5, 0.55, -0.9);
+        const hexFrame = new THREE.Mesh(new THREE.BoxGeometry(0.75, 1.1, 0.55), matDarkSteel);
+        hexGroup.add(hexFrame);
+        const hexPlates = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.85, 0.45), matStainless);
+        hexPlates.position.y = 0.05;
+        hexGroup.add(hexPlates);
+        const hexPump = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.42, 16), matEquipmentBlue);
+        hexPump.rotation.z = Math.PI / 2;
+        hexPump.position.set(0.65, -0.15, 0);
+        hexGroup.add(hexPump);
+        const hexMotor = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.38, 16), matDarkSteel);
+        hexMotor.rotation.z = Math.PI / 2;
+        hexMotor.position.set(1.05, -0.15, 0);
+        hexGroup.add(hexMotor);
+        tagMesh(hexFrame, 'zoneD');
+        scene.add(hexGroup);
+
+        // Pyrolysis Combustor & Flue Energy Recovery Unit
+        const combustor = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 1.1, 20), matStainless);
+        combustor.position.set(zC_x + 0.8, 3.4, zC_z - 0.8);
+        tagMesh(combustor, 'zoneC');
+        scene.add(combustor);
+
+        // PV Surplus to Sand Battery Resistance Heaters (3rd Charging Source Conduit)
+        const pvConduitCurve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(zE_x + 1.2, 1.4, zE_z - 0.5),
+            new THREE.Vector3(zE_x + 3.8, 2.2, zE_z - 0.5),
+            new THREE.Vector3(zD_x - 3.0, 2.6, zD_z + 1.5),
+            new THREE.Vector3(zD_x - 0.6, 4.4, zD_z + 0.4),
+            new THREE.Vector3(zD_x, vesselHeight + 0.1, zD_z)
+        ]);
+        const pvConduit = new THREE.Mesh(
+            new THREE.TubeGeometry(pvConduitCurve, 24, 0.045, 8, false),
+            new THREE.MeshStandardMaterial({{ color: 0x475569, metalness: 0.85, roughness: 0.3 }})
+        );
+        scene.add(pvConduit);
+
+        // 8. PIPING & YELLOW CONDUIT LOOP
+        function makePipe(curve, color, rad = 0.08) {{
+            const geo = new THREE.TubeGeometry(curve, 28, rad, 8, false);
             const mat = new THREE.MeshStandardMaterial({{ color, metalness: 0.8, roughness: 0.25 }});
             const p = new THREE.Mesh(geo, mat);
             scene.add(p);
             return p;
         }}
 
-        // Circuit Solaire -> Sable (Jaune)
-        const solarCurve = new THREE.CatmullRomCurve3([
-            new THREE.Vector3(zE_x + 2.0, 3.8, zE_z),
-            new THREE.Vector3(zD_x + 1.2, 1.8, zE_z),
-            new THREE.Vector3(zD_x + 1.2, 1.8, zD_z + 1.5)
-        ]);
-        createPipe(solarCurve, 0xf59e0b);
-
-        // Circuit Pyrolyse -> Sable (Rouge)
+        // Hot Flue Pipe: Pyrolysis -> Sand Silo (Red)
         const pyroCurve = new THREE.CatmullRomCurve3([
-            new THREE.Vector3(zC_x + 2.4, 3.6, zC_z - 0.8),
-            new THREE.Vector3(zD_x - 1.5, 3.6, zD_z)
+            new THREE.Vector3(zC_x + 0.8, 4.0, zC_z - 0.8),
+            new THREE.Vector3(zD_x - 2.5, 4.3, zD_z),
+            new THREE.Vector3(zD_x - 1.8, 4.0, zD_z)
         ]);
-        createPipe(pyroCurve, 0xef4444);
+        makePipe(pyroCurve, 0xef4444, 0.09);
 
-        // Circuit Sable -> Séchoir (Cyan)
+        // Clean-Air / Steam Circuit via PHE: Sand -> HEX -> Dryer (Cyan)
         const dryerCurve = new THREE.CatmullRomCurve3([
-            new THREE.Vector3(zD_x - 2.5, 0.8, zD_z),
-            new THREE.Vector3(zB_x + 2.8, 0.8, zD_z - 1.5),
-            new THREE.Vector3(zB_x + 2.8, 1.2, zB_z)
+            new THREE.Vector3(zD_x - 2.1, 0.8, zD_z),
+            new THREE.Vector3(8.2, 0.7, -0.9),
+            new THREE.Vector3(6.8, 0.7, -0.9),
+            new THREE.Vector3(drumX + 2.0, 0.8, drumZ - 1.2),
+            new THREE.Vector3(zB_x + 2.4, 1.2, zB_z)
         ]);
-        createPipe(dryerCurve, 0x38bdf8);
+        makePipe(dryerCurve, 0x38bdf8, 0.08);
 
-        // Particules en circulation
+        // Bright Yellow Flexible Thermal Loop (Hero Feature!)
+        const yellowCableCurve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(st_x + 1.2, 1.8, st_z - 0.8),
+            new THREE.Vector3(st_x + 1.8, 0.9, st_z + 1.4),
+            new THREE.Vector3(zE_x + 6.2, 0.35, zE_z + 2.6),
+            new THREE.Vector3(zD_x - 1.2, 0.5, zD_z + 2.8),
+            new THREE.Vector3(zD_x - 1.6, 0.8, zD_z + 1.2)
+        ]);
+        makePipe(yellowCableCurve, 0xeab308, 0.11);
+
+        // Animated Particles
         const particleStreams = [];
         function addParticleStream(curve, color, count = 15, spd = 0.25) {{
             const geo = new THREE.SphereGeometry(0.065, 8, 8);
@@ -648,12 +1097,11 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
             scene.add(mesh);
             particleStreams.push({{ curve, mesh, dummy, prog, count, spd }});
         }}
-
-        addParticleStream(solarCurve, 0xf59e0b, 12, 0.25);
+        addParticleStream(yellowCableCurve, 0xfacc15, 12, 0.25);
         addParticleStream(pyroCurve, 0xef4444, 14, 0.3);
         addParticleStream(dryerCurve, 0x38bdf8, 16, 0.28);
 
-        // NAVIGATION & CAMÉRA
+        // CAMERA NAVIGATION
         let targetCamPos = new THREE.Vector3(22, 17, 24);
         let targetLookAt = new THREE.Vector3(0, 1.8, 0);
         let isTransitioning = false;
@@ -671,6 +1119,17 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
             zoneF: {{ pos: [-13.0, 5.2, -1.8], target: [zF_x, 1.8, zF_z] }}
         }};
 
+        let flowSpeedMultiplier = 1.0;
+
+        function setSpeed(spd) {{
+            flowSpeedMultiplier = spd;
+            flowActive = spd > 0;
+            document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+            const activeBtn = document.getElementById('sp-' + spd);
+            if (activeBtn) activeBtn.classList.add('active');
+            showToast(spd === 0 ? "Circuits flow: PAUSED" : "Circuits flow: " + spd + "x speed");
+        }}
+
         function setCameraPreset(presetKey) {{
             const cfg = presets[presetKey];
             if (!cfg) return;
@@ -678,8 +1137,7 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
             targetLookAt.set(...cfg.target);
             isTransitioning = true;
 
-            // Active button style
-            document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.nav-card').forEach(b => b.classList.remove('active'));
             const activeBtn = document.getElementById('btn-' + presetKey);
             if (activeBtn) activeBtn.classList.add('active');
 
@@ -688,7 +1146,7 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
             }} else {{
                 hideZoneCard();
             }}
-            showToast("Vue : " + (ZONES[presetKey] ? ZONES[presetKey].title : presetKey.toUpperCase()));
+            showToast("Camera: " + (ZONES[presetKey] ? ZONES[presetKey].title : presetKey.toUpperCase()));
         }}
 
         function zoomCam(delta) {{
@@ -708,14 +1166,13 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
                 m.material.opacity = isCutaway ? 0.22 : 1.0;
                 m.material.depthWrite = !isCutaway;
             }});
-            document.getElementById('btn-cutaway').classList.toggle('active', isCutaway);
+            const btn = document.getElementById('tab-cutaway');
+            if (btn) btn.classList.toggle('active', isCutaway);
             showToast(isCutaway ? "Cutaway X-Ray Mode ACTIVE" : "Realistic PBR Mode ACTIVE");
         }}
 
         function toggleFlow() {{
             flowActive = !flowActive;
-            document.getElementById('btn-flow').textContent = flowActive ? "Flow: Active" : "Flow: Paused";
-            document.getElementById('btn-flow').classList.toggle('active', !flowActive);
             showToast(flowActive ? "Streamlines animation resumed" : "Streamlines animation paused");
         }}
 
@@ -741,55 +1198,32 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
             t.timer = setTimeout(() => {{ t.style.display = 'none'; }}, 2200);
         }}
 
-        // RAYCASTING & CLIC TACTILE DIRECT
+        // RAYCASTING ON CLICK
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
         let pointerDownTime = 0, pointerDownX = 0, pointerDownY = 0;
 
         container.addEventListener('pointerdown', (e) => {{
             pointerDownTime = performance.now();
-            pointerDownX = e.clientX;
-            pointerDownY = e.clientY;
+            pointerDownX = e.clientX; pointerDownY = e.clientY;
         }});
 
         container.addEventListener('pointerup', (e) => {{
-            const dist = Math.hypot(e.clientX - pointerDownX, e.clientY - pointerDownY);
-            if (dist < 10 && (performance.now() - pointerDownTime) < 500) {{
-                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            const dx = e.clientX - pointerDownX, dy = e.clientY - pointerDownY;
+            if (Math.hypot(dx, dy) < 10 && performance.now() - pointerDownTime < 500) {{
+                const rect = container.getBoundingClientRect();
+                mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
                 raycaster.setFromCamera(mouse, camera);
-                const hits = raycaster.intersectObjects(raycastObjects, false);
+                const hits = raycaster.intersectObjects(raycastObjects, true);
                 if (hits.length > 0) {{
-                    const zid = hits[0].object.userData.zoneId;
-                    if (zid) setCameraPreset(zid);
+                    let cur = hits[0].object;
+                    while (cur && !cur.userData?.zoneId) cur = cur.parent;
+                    if (cur?.userData?.zoneId) {{
+                        setCameraPreset(cur.userData.zoneId);
+                    }}
                 }}
             }}
-        }});
-
-        // CLAVIER
-        window.addEventListener('keydown', (e) => {{
-            const k = e.key.toLowerCase();
-            if (k === 'h') {{
-                const dock = document.querySelector('.dock-bottom');
-                dock.style.display = dock.style.display === 'none' ? 'flex' : 'none';
-            }} else if (e.code === 'Space') {{
-                e.preventDefault();
-                toggleFlow();
-            }} else if (k === 'm') {{
-                toggleCutaway();
-            }} else if (k === '0' || k === 'i') {{
-                setCameraPreset('iso');
-            }} else if (k === 'p') {{
-                setCameraPreset('plan');
-            }} else if (k === '1' || k === 'a') setCameraPreset('zoneA');
-            else if (k === '2' || k === 'b') setCameraPreset('zoneB');
-            else if (k === '3' || k === 'c') setCameraPreset('zoneC');
-            else if (k === '4' || k === 'd') setCameraPreset('zoneD');
-            else if (k === '5' || k === 'e') setCameraPreset('zoneE');
-            else if (k === '6' || k === 'f') setCameraPreset('zoneF');
-            else if (k === '+' || k === '=') zoomCam(-4);
-            else if (k === '-') zoomCam(4);
-            else if (k === 'escape') hideZoneCard();
         }});
 
         window.addEventListener('resize', () => {{
@@ -802,7 +1236,7 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
         const clock = new THREE.Clock();
         function animate() {{
             requestAnimationFrame(animate);
-            const delta = Math.min(clock.getDelta(), 0.1);
+            const delta = clock.getDelta();
 
             if (isTransitioning) {{
                 camera.position.lerp(targetCamPos, 0.08);
@@ -810,27 +1244,20 @@ def get_3d_viewer_html(telemetry: dict, lang: str = "en") -> str:
                 if (camera.position.distanceTo(targetCamPos) < 0.1) isTransitioning = false;
             }}
 
-            controls.update();
-
-            // Rotation mécanique
-            rotatingParts.forEach(p => {{
-                p.obj.rotation[p.axis] += p.speed * delta;
-            }});
-
-            // Animation des flux
             if (flowActive) {{
-                particleStreams.forEach(s => {{
-                    for(let i=0; i<s.count; i++) {{
-                        s.prog[i] = (s.prog[i] + s.spd * delta) % 1.0;
-                        const pt = s.curve.getPointAt(s.prog[i]);
-                        s.dummy.position.copy(pt);
-                        s.dummy.updateMatrix();
-                        s.mesh.setMatrixAt(i, s.dummy.matrix);
+                particleStreams.forEach(ps => {{
+                    for (let i = 0; i < ps.count; i++) {{
+                        ps.prog[i] = (ps.prog[i] + ps.spd * delta * 0.4) % 1.0;
+                        const pt = ps.curve.getPoint(ps.prog[i]);
+                        ps.dummy.position.copy(pt);
+                        ps.dummy.updateMatrix();
+                        ps.mesh.setMatrixAt(i, ps.dummy.matrix);
                     }}
-                    s.mesh.instanceMatrix.needsUpdate = true;
+                    ps.mesh.instanceMatrix.needsUpdate = true;
                 }});
             }}
 
+            controls.update();
             renderer.render(scene, camera);
         }}
         animate();

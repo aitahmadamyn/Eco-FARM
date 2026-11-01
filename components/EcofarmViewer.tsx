@@ -286,7 +286,7 @@ export default function EcofarmViewer() {
         </div>
       )}
 
-      {/* Floating Touch & Navigation Toolbar (Right Flank - Matching preview) */}
+      {/* Floating Touch & Navigation Toolbar (Right Flank - Exactly 4 buttons matching screenshot) */}
       <div className="fixed right-3.5 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-2">
         <button
           onClick={() => {
@@ -319,36 +319,17 @@ export default function EcofarmViewer() {
           <RotateCcw className="w-4 h-4 text-emerald-400" />
         </button>
         <button
-          onClick={() => {
-            handleSelectPreset('plan');
-            showToast('BIM Plan View');
-          }}
-          className="w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-sky-600 text-slate-200 hover:text-white border border-sky-500/30 flex items-center justify-center shadow-xl transition-all active:scale-95 cursor-pointer"
-          title="BIM Plan View (Top-Down)"
-        >
-          <Compass className="w-4 h-4 text-amber-400" />
-        </button>
-        <button
-          onClick={() => {
-            handleSetDisplayMode(displayMode === 'realistic' ? 'cutaway' : 'realistic');
-            showToast(displayMode === 'realistic' ? t.toastModeCutaway : t.toastModeRealistic);
-          }}
-          className={`w-9 h-9 rounded-xl border flex items-center justify-center shadow-xl transition-all active:scale-95 cursor-pointer ${
-            displayMode === 'cutaway'
-              ? 'bg-amber-500 border-amber-400 text-white'
-              : 'bg-slate-900/90 hover:bg-sky-600 text-slate-200 hover:text-white border-sky-500/30'
-          }`}
-          title="Cutaway X-Ray Mode"
-        >
-          <Eye className="w-4 h-4" />
-        </button>
-        <button
           onClick={() => setIsKeyboardModalOpen(true)}
-          className="w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60 flex items-center justify-center shadow-xl transition-all active:scale-95 cursor-pointer"
+          className="w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-amber-400 hover:text-amber-300 border border-slate-700/80 flex items-center justify-center shadow-xl transition-all active:scale-95 cursor-pointer"
           title={t.shortcutsGuide}
         >
           <Keyboard className="w-3.5 h-3.5" />
         </button>
+      </div>
+
+      {/* Bottom Left Next.js Circular Badge (Matching screenshot) */}
+      <div className="fixed bottom-3.5 left-3.5 z-20 w-9 h-9 rounded-full bg-slate-900/90 border border-slate-700/80 flex items-center justify-center text-slate-200 font-bold text-sm shadow-2xl pointer-events-none select-none backdrop-blur-md">
+        <span>N</span>
       </div>
 
       {/* Unified Bottom Control Dock */}
