@@ -1,31 +1,82 @@
 """
 ECOFARM CIRCULAR — 3D Industrial Engineering Digital Twin
-Main entry point for Streamlit Cloud deployment (Main file path: app.py).
+Main entry point for Streamlit Cloud deployment.
 """
 
 import os
 import json
+import sys
+import importlib.util
 import urllib.request
 import urllib.error
+from pathlib import Path
+
 import streamlit as st
 import streamlit.components.v1 as components
 
-# Import native WebGL Three.js 3D viewer (lib/streamlit_3d.py)
-try:
-    from lib.streamlit_3d import get_3d_viewer_html
-except ImportError:
-    import sys
-    from pathlib import Path
-    sys.path.append(str(Path(__file__).parent))
-    from lib.streamlit_3d import get_3d_viewer_html
 
-# Streamlit Page Configuration
+# --------------------------------------------------
+# STREAMLIT CONFIGURATION
+# --------------------------------------------------
+
 st.set_page_config(
     page_title="ECOFARM CIRCULAR — 3D Digital Twin",
     page_icon="🌱",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+
+# --------------------------------------------------
+# LOAD THE THREE.JS 3D VIEWER
+# --------------------------------------------------
+
+BASE_DIR = Path(__file__).resolve().parent
+VIEWER_PATH = BASE_DIR / "lib" / "streamlit_3d.py"
+
+if not VIEWER_PATH.is_file():
+    st.error("❌ 3D viewer module not found.")
+    st.code(
+        "Expected file:\n"
+        "lib/streamlit_3d.py\n\n"
+        f"Resolved path:\n{VIEWER_PATH}"
+    )
+    st.stop()
+
+try:
+    spec = importlib.util.spec_from_file_location(
+        "_ecofarm_streamlit_3d",
+        VIEWER_PATH
+    )
+
+    if spec is None or spec.loader is None:
+        raise ImportError("Unable to create the 3D viewer module loader.")
+
+    viewer_module = importlib.util.module_from_spec(spec)
+
+    # Register the module before executing it.
+    sys.modules[spec.name] = viewer_module
+    spec.loader.exec_module(viewer_module)
+
+    get_3d_viewer_html = getattr(
+        viewer_module,
+        "get_3d_viewer_html"
+    )
+
+    if not callable(get_3d_viewer_html):
+        raise TypeError(
+            "get_3d_viewer_html is missing or is not a function."
+        )
+
+except Exception as error:
+    st.error("❌ Unable to load the ECOFARM 3D viewer.")
+    st.exception(error)
+    st.stop()
+
+
+# --------------------------------------------------
+# YOUR ORIGINAL CODE CONTINUES BELOW
+# --------------------------------------------------
 
 # Secure secret retrieval (st.secrets with os.environ fallback)
 def get_secret(key_name: str, default: str = "") -> str:
